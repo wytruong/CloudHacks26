@@ -1,72 +1,71 @@
 # 🛡️ SentinelIQ
 ### Autonomous Account Takeover Detection & Response — UCI CloudHacks 2026
 
-> "SentinelIQ gives security teams the right level of AI autonomy — fully automatic when it's obvious, human-confirmed when it's borderline, silent monitoring when it's low risk."
+> "SentinelIQ doesn't just detect one attack. It recognizes when your entire platform is under coordinated attack — and shuts it down autonomously."
 
 ---
 
 ## 🚨 The Problem
 
-By the time you find out your account was compromised — a breach email, a password reset you didn't request, weird charges — the attacker has already been inside for hours. Existing tools detect threats but still require a human to manually investigate and respond. That takes time. Time costs data.
+By the time an end user finds out their account was compromised, the damage is done. Existing tools detect threats but still require a human to investigate and respond manually. That takes hours. Attackers need seconds.
 
-**Last year alone, the average cost of a data breach was $4.88M. The average detection time was 194 days.**
+**Average cost of a data breach: $4.88M. Average detection time: 194 days.**
+
+SentinelIQ closes that gap to 4 seconds.
 
 ---
 
 ## 💡 What SentinelIQ Does
 
-SentinelIQ is an **autonomous security agent** powered by AWS Bedrock that detects suspicious login attempts, investigates them step-by-step, and responds — all in under 4 seconds.
+SentinelIQ is an **autonomous multi-agent security system** powered by Amazon Bedrock AgentCore that detects suspicious login attempts, investigates them across your entire user base, and responds — all without human intervention for high-confidence threats.
 
-It doesn't just flag threats. It thinks, decides, and acts.
+It doesn't just flag threats. It thinks, coordinates, decides, and acts.
 
 ### Confidence Threshold System
 | Confidence | Action | Human Needed? |
 |---|---|---|
-| 90%+ | Auto-block session, notify user, generate report | ❌ None |
-| 60–89% | Draft response, pause for analyst approval | ✅ One click |
-| Below 60% | Silent flag in dashboard, low priority queue | 🔍 Review later |
+| 90%+ | Auto-block, notify user, generate report | ❌ None |
+| 60–89% | Rekognition selfie check → analyst confirms | ✅ One click |
+| Below 60% | Silent flag, low priority queue | 🔍 Review later |
 
 ---
 
-## 🎯 Demo Scenario
+## 🎯 Demo Scenarios
 
-A login attempt arrives at 2:01AM from Bucharest, Romania — 5,700 miles from the user's last known location in Irvine, CA. The same trip would take 6 hours by plane. The device fingerprint doesn't match. MFA was not passed.
+**Single account attack (97% confidence — fully autonomous):**
+2AM login from Bucharest, Romania. Last login Irvine CA 6 hours ago. 5,700 miles apart. Device unknown. MFA failed. Blocked in 4 seconds.
 
-**Bedrock's verdict: 97% confidence — BLOCK.**
+**Coordinated attack (Neptune graph detection):**
+Same IP hits 12 accounts within 3 minutes. Neptune traverses the account graph, finds every connected node, mass-protects all 12 simultaneously.
 
-The session is terminated in 4 seconds. The user gets notified. The incident report is auto-generated and stored. The analyst sees it all happen in real time on the SOC dashboard.
+**Borderline case (71% confidence — Rekognition):**
+Login from Singapore, known device but unusual hour. Rekognition requests a selfie. Stranger's face → auto-block. Real user → mark safe.
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-Login Event
-    ↓
-AWS Lambda (event receiver)
-    ↓
-Amazon Bedrock Agent (Claude Sonnet)
-    ├── Investigate: check IP, location delta, device, time, MFA
-    ├── Score: confidence 0–100
-    ├── Decide: AUTO-BLOCK / CONFIRM / FLAG
-    └── Act: block session + draft report + notify
-    ↓
-MongoDB Atlas (store events, reports, account history)
-    ↓
-Amazon S3 (store generated incident report PDFs)
-    ↓
-React Frontend (SOC Dashboard — real-time visualization)
+End User Login Event
+        ↓
+Amazon Kinesis Data Streams
+        ↓
+Amazon EventBridge
+        ↓
+AWS Step Functions (orchestrates agent pipeline)
+        ↓
+Bedrock AgentCore — Multi-Agent Pipeline
+  ├── Agent 1 — Triage (score individual event)
+  ├── Agent 2 — Cross-Account Scan (Neptune graph)
+  └── Agent 3 — Decision + Response
+      90%+  → auto-block + notify + report
+      60-89% → Rekognition selfie → analyst confirm
+      <60%  → silent flag
+        ↓
+DynamoDB + S3
+        ↓
+API Gateway WebSocket → React SOC Dashboard
 ```
-
----
-
-## 🖥️ Product Screens
-
-**Screen 1 — Login:** Enterprise SOC login page with animated COBE globe showing global login activity.
-
-**Screen 2 — War Room:** 3-column SOC dashboard. Left: flagged accounts list. Center: interactive world globe tracing the attack path + Bedrock's live AI reasoning steps. Right: auto-drafted Slack alert, email preview, and damage outcome card.
-
-**Screen 3 — Incident Report:** Auto-generated full incident report with executive summary, attack timeline, AI findings, actions taken, and recommendations. Ready to hand to a CISO.
 
 ---
 
@@ -74,48 +73,28 @@ React Frontend (SOC Dashboard — real-time visualization)
 
 | Layer | Technology |
 |---|---|
-| Frontend | React, TypeScript, Tailwind CSS, shadcn/ui |
-| Globe Visualization | COBE (3D interactive WebGL globe) |
-| AI Agent | Amazon Bedrock (Claude Sonnet) with tool use |
-| Serverless Backend | AWS Lambda |
-| Database | MongoDB Atlas |
+| Frontend | React, TypeScript, Tailwind CSS, shadcn/ui, COBE |
+| Real-time Ingestion | Amazon Kinesis Data Streams |
+| Event Routing | Amazon EventBridge |
+| Orchestration | AWS Step Functions |
+| AI Agents | Amazon Bedrock AgentCore (Claude Sonnet 4.5) |
+| Graph Detection | Amazon Neptune |
+| Face Verification | Amazon Rekognition |
+| Compute | AWS Lambda |
+| Database | Amazon DynamoDB |
 | Storage | Amazon S3 |
+| Real-time Push | Amazon API Gateway WebSocket |
 | Region | us-west-2 |
 
 ---
 
 ## 👥 Team
 
-| Name | Role |
-|---|---|
-| My Truong | Frontend Lead + Integration + Demo |
-| Jenny | AWS Backend + Bedrock Agent + Lambda |
-| TBD | Data Simulation + Devpost + Architecture Diagram |
-
----
-
-## 📁 Repo Structure
-
-```
-CloudHacks26/
-├── frontend/          # React + TypeScript + Tailwind app
-│   ├── components/
-│   │   └── ui/
-│   │       ├── cobe-globe.tsx
-│   │       └── cobe-globe-pulse.tsx
-│   ├── screens/
-│   │   ├── Login.tsx
-│   │   ├── Dashboard.tsx
-│   │   └── IncidentReport.tsx
-│   └── App.tsx
-├── backend/           # AWS Lambda functions
-│   ├── receive-event/
-│   ├── bedrock-agent/
-│   └── generate-report/
-├── simulation/        # Demo data + event scripts
-│   └── demo-events.json
-└── README.md
-```
+| Name | Role | Owns |
+|---|---|---|
+| My Truong | Frontend + Integration | 3 screens, COBE globe, WebSocket, demo |
+| Jenny | AWS Backend | Kinesis, AgentCore, Neptune, Rekognition, Step Functions, DynamoDB |
+| Person 3 | Data + Docs | demo-events.json, simulation script, Devpost, architecture diagram |
 
 ---
 
@@ -134,10 +113,11 @@ POST /api/login-event
   "timestamp": "2026-04-18T02:01:00Z"
 }
 
-Response:
+WebSocket Response:
 {
   "confidence": 97,
   "verdict": "BLOCK",
+  "tier": "auto",
   "reasoning": [
     "Last login: Irvine CA, 2:14pm PST",
     "Current login: Bucharest RO, 2:01am EET",
@@ -146,20 +126,82 @@ Response:
     "MFA: NOT PASSED",
     "Verdict: BLOCK SESSION"
   ],
+  "coordinatedAttack": false,
+  "affectedAccounts": [],
   "action": "auto-blocked",
-  "reportId": "INC-2047"
+  "reportId": "INC-2047",
+  "agentSteps": [
+    { "agent": "Triage", "status": "complete", "score": 97 },
+    { "agent": "CrossAccount", "status": "complete", "found": 0 },
+    { "agent": "Decision", "status": "complete", "action": "BLOCK" }
+  ]
 }
 ```
 
 ---
 
-## 🏆 Track Targets
+## 📁 Repo Structure
 
-- **AWS Track** — Primary (Bedrock + Lambda + S3 deeply integrated)
-- **Best AI Safety Track** — Secondary (autonomous threat prevention, protecting user accounts)
+```
+CloudHacks26/
+├── frontend/
+│   ├── components/ui/
+│   │   ├── cobe-globe.tsx
+│   │   └── cobe-globe-pulse.tsx
+│   ├── screens/
+│   │   ├── Login.tsx
+│   │   ├── Dashboard.tsx
+│   │   └── IncidentReport.tsx
+│   ├── hooks/
+│   │   └── useWebSocket.ts
+│   └── App.tsx
+├── backend/
+│   ├── kinesis-consumer/
+│   ├── agents/
+│   │   ├── triage-agent/
+│   │   ├── cross-account-agent/
+│   │   └── decision-agent/
+│   ├── step-functions/pipeline.json
+│   ├── rekognition/
+│   └── websocket-api/
+├── simulation/
+│   ├── demo-events.json
+│   └── fire-events.py
+└── README.md
+```
 
 ---
 
-## ⏱️ Hackathon
+## ⏱️ 72-Hour Build Plan
+
+**Tonight (Hours 1-4):**
+- My Truong: scaffold frontend, 3 screens with dummy data, WebSocket hook
+- Jenny: Kinesis stream up, Lambda consumer, Bedrock returning hardcoded response
+- Person 3: write all 6 demo events covering 3 confidence tiers
+
+**Tomorrow Morning (Hours 5-12):**
+- My Truong: COBE globe, typewriter animation, agent step visualizer
+- Jenny: AgentCore multi-agent pipeline, Neptune graph, DynamoDB schema
+- Person 3: simulation script firing events to Kinesis on timer
+
+**Tomorrow Afternoon (Hours 13-24):**
+- Integration: connect frontend WebSocket to API Gateway
+- Full end-to-end test
+- Rekognition selfie flow for 60-89% events
+
+**Sunday (Hours 25-60):**
+- Polish, bug fixes, stress test demo
+- Person 3: Devpost writeup + architecture diagram
+- Record demo video
+- Submit by 5:50PM
+
+---
+
+## 🏆 Track Targets
+
+- **AWS Track** — Primary (Kinesis + AgentCore + Neptune + Rekognition + Step Functions)
+- **Best AI Safety Track** — Secondary (explainable AI, human-in-loop, Rekognition safety net, coordinated attack protection)
+
+---
 
 UCI CloudHacks 2026 — 72 hours — April 17–20, 2026

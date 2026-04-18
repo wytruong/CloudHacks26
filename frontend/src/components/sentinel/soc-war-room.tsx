@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Check, LogOut } from "lucide-react"
 
 import { Globe } from "@/components/ui/cobe-globe"
@@ -37,6 +37,32 @@ function formatClock(d: Date): string {
     second: "2-digit",
     hour12: true,
   })
+}
+
+const PIPELINE_TOOLTIPS: Record<string, string> = {
+  "Triage Agent": "Scores the login event: location, device, time, MFA.",
+  "Cross-Account Scan": "Checks if same IP hit other accounts.",
+  "Decision Agent": "Makes final verdict and triggers response.",
+}
+
+const STAT_PILL_TOOLTIPS: Partial<Record<string, string>> = {
+  "Active Threats": "Accounts currently under AI investigation.",
+  "Blocked Today": "Sessions terminated by Vault today.",
+  "Avg Response Time": "Average time from detection to action.",
+}
+
+const TOOLTIP_PANEL_CLASS =
+  "pointer-events-none absolute bottom-full left-1/2 z-[80] mb-1.5 w-max max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal border border-[#ef4444] bg-[#0a0000] px-2 py-1 text-center font-mono text-[11px] leading-snug text-[#9ca3af] opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
+
+function SocTooltip({ children, text, wrapperClassName }: { children: ReactNode; text: string; wrapperClassName?: string }) {
+  return (
+    <span className={wrapperClassName ? `group relative ${wrapperClassName}` : "group relative inline-flex max-w-full"}>
+      {children}
+      <span className={TOOLTIP_PANEL_CLASS} style={{ borderWidth: "0.5px", borderRadius: "4px" }} role="tooltip">
+        {text}
+      </span>
+    </span>
+  )
 }
 
 export function SocWarRoom() {
@@ -333,22 +359,33 @@ export function SocWarRoom() {
                             VERIFIED
                           </Badge>
                         ) : (
-                          <Badge
-                            variant="outline"
-                            className={[
-                              "border-[0.5px] font-mono text-[10px] uppercase tracking-wide",
-                              inc.severity === "CRITICAL" &&
-                                "border-[#ef4444] bg-[#2a0a0a] text-[#ef4444]",
-                              inc.severity === "WARN" &&
-                                "border-[#f59e0b] bg-[#1a0800] text-[#f59e0b]",
-                              inc.severity === "INFO" &&
-                                "border-[#6b7280] bg-[#0a0a0a] text-[#9ca3af]",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
+                          <SocTooltip
+                            text={
+                              inc.severity === "CRITICAL"
+                                ? "90%+ confidence. Session auto-blocked by Bedrock AI."
+                                : inc.severity === "WARN"
+                                  ? "60-89% confidence. Awaiting analyst confirmation."
+                                  : "Below 60% confidence. Silently monitored."
+                            }
+                            wrapperClassName="inline-flex shrink-0"
                           >
-                            {inc.severity}
-                          </Badge>
+                            <Badge
+                              variant="outline"
+                              className={[
+                                "border-[0.5px] font-mono text-[10px] uppercase tracking-wide",
+                                inc.severity === "CRITICAL" &&
+                                  "border-[#ef4444] bg-[#2a0a0a] text-[#ef4444]",
+                                inc.severity === "WARN" &&
+                                  "border-[#f59e0b] bg-[#1a0800] text-[#f59e0b]",
+                                inc.severity === "INFO" &&
+                                  "border-[#6b7280] bg-[#0a0a0a] text-[#9ca3af]",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            >
+                              {inc.severity}
+                            </Badge>
+                          </SocTooltip>
                         )}
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#9ca3af]">
@@ -373,7 +410,7 @@ export function SocWarRoom() {
 
         {/* Center */}
         <main className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-y-contain bg-[#000000] px-3 py-4 lg:col-span-6 lg:px-4">
-          <div className="mx-auto w-full max-w-md shrink-0">
+          <div className="group relative mx-auto w-full max-w-md shrink-0">
             <Globe
               markers={globeMarkers}
               arcs={globeArcs}
@@ -388,11 +425,19 @@ export function SocWarRoom() {
               theta={0.2}
               className="w-full"
             />
+            <span className={TOOLTIP_PANEL_CLASS} style={{ borderWidth: "0.5px", borderRadius: "4px" }} role="tooltip">
+              Live global login activity for Definitely Safe Co.
+            </span>
           </div>
           <div className="flex justify-center">
-            <span className="sentinel-threat-badge inline-flex items-center rounded-md border border-[#ef4444] bg-[#2a0a0a] px-3 py-1 font-mono text-[10px] font-semibold tracking-widest text-[#ef4444]">
-              THREAT DETECTED
-            </span>
+            <SocTooltip
+              text="Active threat detected. AI investigation in progress."
+              wrapperClassName="inline-flex"
+            >
+              <span className="sentinel-threat-badge inline-flex items-center rounded-md border border-[#ef4444] bg-[#2a0a0a] px-3 py-1 font-mono text-[10px] font-semibold tracking-widest text-[#ef4444]">
+                THREAT DETECTED
+              </span>
+            </SocTooltip>
           </div>
 
           <div
@@ -414,24 +459,26 @@ export function SocWarRoom() {
                 const st = pipeline[idx]!
                 return (
                   <div key={label} className="flex flex-1 items-center gap-2">
-                    <div
-                      className={[
-                        "flex min-h-[52px] flex-1 flex-col justify-center rounded-md border px-2 py-2 text-center font-mono text-[11px] leading-tight",
-                        st === "pending" &&
-                          "border-[0.5px] border-[#2a0a0a] bg-[linear-gradient(to_bottom,#0a0000,#000000)] text-[#9ca3af]",
-                        st === "active" &&
-                          "sentinel-step-pulse border-[0.5px] border-[#2a0a0a] bg-[linear-gradient(to_bottom,#0a0000,#000000)] text-[#9ca3af]",
-                        st === "complete" &&
-                          "border-[0.5px] border-[#ef4444] bg-[linear-gradient(to_bottom,#1a0000,#0a0000)] text-[#ef4444]",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      <span className="flex items-center justify-center gap-1">
-                        {st === "complete" && <Check className="size-3.5 shrink-0 text-[#ef4444]" />}
-                        {label}
-                      </span>
-                    </div>
+                    <SocTooltip text={PIPELINE_TOOLTIPS[label]!} wrapperClassName="flex min-w-0 flex-1">
+                      <div
+                        className={[
+                          "flex min-h-[52px] w-full flex-1 flex-col justify-center rounded-md border px-2 py-2 text-center font-mono text-[11px] leading-tight",
+                          st === "pending" &&
+                            "border-[0.5px] border-[#2a0a0a] bg-[linear-gradient(to_bottom,#0a0000,#000000)] text-[#9ca3af]",
+                          st === "active" &&
+                            "sentinel-step-pulse border-[0.5px] border-[#2a0a0a] bg-[linear-gradient(to_bottom,#0a0000,#000000)] text-[#9ca3af]",
+                          st === "complete" &&
+                            "border-[0.5px] border-[#ef4444] bg-[linear-gradient(to_bottom,#1a0000,#0a0000)] text-[#ef4444]",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <span className="flex items-center justify-center gap-1">
+                          {st === "complete" && <Check className="size-3.5 shrink-0 text-[#ef4444]" />}
+                          {label}
+                        </span>
+                      </div>
+                    </SocTooltip>
                     {idx < 2 && (
                       <span className="hidden font-mono text-[#7f1d1d] sm:inline" aria-hidden>
                         →
@@ -485,20 +532,30 @@ export function SocWarRoom() {
           )}
 
           <div className="mt-auto flex flex-col gap-2 pb-2 sm:flex-row">
-            <Button
-              type="button"
-              className="flex-1 border-0 bg-[#ef4444] text-white hover:bg-[#ef4444]/90"
-              onClick={onBlockSession}
+            <SocTooltip
+              text="Terminate session and notify user via email."
+              wrapperClassName="flex min-w-0 flex-1 flex-col sm:flex-1"
             >
-              Block Session
-            </Button>
-            <Button
-              type="button"
-              className="flex-1 border-0 bg-[#22c55e] text-white hover:bg-[#22c55e]/90"
-              onClick={onMarkSafe}
+              <Button
+                type="button"
+                className="w-full flex-1 border-0 bg-[#ef4444] text-white hover:bg-[#ef4444]/90"
+                onClick={onBlockSession}
+              >
+                Block Session
+              </Button>
+            </SocTooltip>
+            <SocTooltip
+              text="Whitelist this device and clear the threat flag."
+              wrapperClassName="flex min-w-0 flex-1 flex-col sm:flex-1"
             >
-              Mark Safe
-            </Button>
+              <Button
+                type="button"
+                className="w-full flex-1 border-0 bg-[#22c55e] text-white hover:bg-[#22c55e]/90"
+                onClick={onMarkSafe}
+              >
+                Mark Safe
+              </Button>
+            </SocTooltip>
           </div>
         </main>
 
@@ -536,41 +593,46 @@ export function SocWarRoom() {
             </CardContent>
           </Card>
 
-          <Card
-            className="border border-[#7f1d1d] bg-[#0a0000] shadow-none"
-            style={{ borderWidth: "0.5px" }}
-          >
-            <CardContent className="space-y-3 pt-4">
-              <Badge className="border-0 bg-[#2a0a0a] font-mono text-[10px] uppercase tracking-wide text-[#ef4444] hover:bg-[#2a0a0a]">
-                Incident Resolved
-              </Badge>
-              <dl className="grid grid-cols-1 gap-2 font-mono text-[11px] text-[#9ca3af]">
-                <div className="flex justify-between gap-2">
-                  <dt>Response Time</dt>
-                  <dd className="text-[#ffffff]">4s</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt>Records Protected</dt>
-                  <dd className="text-[#ffffff]">3000</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt>Damage Avoided</dt>
-                  <dd className="text-[#ffffff]">$47000</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt>Logged</dt>
-                  <dd className="text-[#ffffff]">DynamoDB + S3</dd>
-                </div>
-              </dl>
-              <Button
-                type="button"
-                className="w-full border-0 bg-[#ef4444] font-mono text-xs text-[#ffffff] hover:bg-[#dc2626]"
-                onClick={() => router.push("/report")}
-              >
-                View Full Report
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="group relative">
+            <Card
+              className="border border-[#7f1d1d] bg-[#0a0000] shadow-none"
+              style={{ borderWidth: "0.5px" }}
+            >
+              <CardContent className="space-y-3 pt-4">
+                <Badge className="border-0 bg-[#2a0a0a] font-mono text-[10px] uppercase tracking-wide text-[#ef4444] hover:bg-[#2a0a0a]">
+                  Incident Resolved
+                </Badge>
+                <dl className="grid grid-cols-1 gap-2 font-mono text-[11px] text-[#9ca3af]">
+                  <div className="flex justify-between gap-2">
+                    <dt>Response Time</dt>
+                    <dd className="text-[#ffffff]">4s</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt>Records Protected</dt>
+                    <dd className="text-[#ffffff]">3000</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt>Damage Avoided</dt>
+                    <dd className="text-[#ffffff]">$47000</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt>Logged</dt>
+                    <dd className="text-[#ffffff]">DynamoDB + S3</dd>
+                  </div>
+                </dl>
+                <Button
+                  type="button"
+                  className="w-full border-0 bg-[#ef4444] font-mono text-xs text-[#ffffff] hover:bg-[#dc2626]"
+                  onClick={() => router.push("/report")}
+                >
+                  View Full Report
+                </Button>
+              </CardContent>
+            </Card>
+            <span className={TOOLTIP_PANEL_CLASS} style={{ borderWidth: "0.5px", borderRadius: "4px" }} role="tooltip">
+              Threat neutralized. Report logged to DynamoDB + S3.
+            </span>
+          </div>
 
           <div className="mt-auto flex flex-wrap gap-2 pb-2">
             {[
@@ -578,16 +640,28 @@ export function SocWarRoom() {
               [String(activeThreatCount), "Active Threats"],
               [String(blockedTodayCount), "Blocked Today"],
               ["3.2s", "Avg Response Time"],
-            ].map(([k, label]) => (
-              <div
-                key={label}
-                className="min-w-[calc(50%-4px)] flex-1 rounded-full border border-[#2a0a0a] bg-[#0a0000] px-2 py-2 text-center font-mono text-[10px] text-[#9ca3af] sm:min-w-0"
-                style={{ borderWidth: "0.5px" }}
-              >
-                <span className="block text-sm font-semibold text-[#ffffff]">{k}</span>
-                {label}
-              </div>
-            ))}
+            ].map(([k, label]) => {
+              const pillTip = STAT_PILL_TOOLTIPS[label]
+              return (
+                <div
+                  key={label}
+                  className={
+                    pillTip
+                      ? "group relative min-w-[calc(50%-4px)] flex-1 rounded-full border border-[#2a0a0a] bg-[#0a0000] px-2 py-2 text-center font-mono text-[10px] text-[#9ca3af] sm:min-w-0"
+                      : "min-w-[calc(50%-4px)] flex-1 rounded-full border border-[#2a0a0a] bg-[#0a0000] px-2 py-2 text-center font-mono text-[10px] text-[#9ca3af] sm:min-w-0"
+                  }
+                  style={{ borderWidth: "0.5px" }}
+                >
+                  <span className="block text-sm font-semibold text-[#ffffff]">{k}</span>
+                  {label}
+                  {pillTip ? (
+                    <span className={TOOLTIP_PANEL_CLASS} style={{ borderWidth: "0.5px", borderRadius: "4px" }} role="tooltip">
+                      {pillTip}
+                    </span>
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
         </aside>
       </div>

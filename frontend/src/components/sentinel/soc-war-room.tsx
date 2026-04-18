@@ -371,13 +371,13 @@ export function SocWarRoom() {
     if (otp.length !== 6 || otpPhase === "loading") return
     setOtpPhase("loading")
     try {
+      const selectedIncident = selected
+      const accountId = selectedIncident.emailRedacted
+      console.log("Sending OTP verify:", { accountId, otp })
       const res = await fetch(VERIFY_OTP_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountId: selected.emailRedacted,
-          otp,
-        }),
+        body: JSON.stringify({ accountId: selectedIncident.emailRedacted, otp: otpDigits.join("") }),
       })
       const data = (await res.json()) as { verified?: boolean }
       if (data.verified === true) {

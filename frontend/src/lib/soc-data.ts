@@ -13,6 +13,7 @@ export interface SocIncident {
   markers: Marker[]
   arcs: Arc[]
   reasoning: string[]
+  confidence?: number
   requiresSelfieReview?: boolean
 }
 

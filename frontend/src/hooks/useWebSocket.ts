@@ -131,6 +131,8 @@ function mapWsPayloadToSocIncident(raw: unknown): SocIncident | null {
     markers,
     arcs,
     reasoning,
+    confidence,
+    requiresSelfieReview: confidence >= 60 && confidence <= 89,
   }
 }
 

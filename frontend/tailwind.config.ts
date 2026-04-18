@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss"
 
 /**
- * SentinelIQ surface tokens (mirrors globals.css). Tailwind v4 still reads this
+ * Vault surface tokens (mirrors globals.css). Tailwind v4 still reads this
  * for tooling; content paths ensure class scanning in all environments.
  */
 export default {

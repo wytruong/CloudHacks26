@@ -34,7 +34,7 @@ export function LoginScreen() {
             className="text-center font-mono font-bold text-[#ef4444]"
             style={{ fontSize: "32px", letterSpacing: "3px" }}
           >
-            SENTINEL IQ
+            VAULT
           </h1>
           <p className="mt-2 text-center text-[13px] text-[#9ca3af]">
             Security Operations Platform

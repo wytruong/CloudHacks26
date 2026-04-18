@@ -1,7 +1,7 @@
-## SentinelIQ
+## Vault
 ### Autonomous Account Takeover Detection & Response — UCI CloudHacks 2026
 
-> "SentinelIQ doesn't just detect one attack. It recognizes when your entire platform is under coordinated attack — and shuts it down autonomously."
+> "Vault doesn't just detect one attack. It recognizes when your entire platform is under coordinated attack — and shuts it down autonomously."
 
 ---
 
@@ -11,13 +11,13 @@ By the time an end user finds out their account was compromised, the damage is d
 
 **Average cost of a data breach: $4.88M. Average detection time: 194 days.**
 
-SentinelIQ closes that gap to 4 seconds.
+Vault closes that gap to 4 seconds.
 
 ---
 
-## What SentinelIQ Does
+## What Vault Does
 
-SentinelIQ is an **autonomous multi-agent security system** powered by Amazon Bedrock AgentCore that detects suspicious login attempts, investigates them across your entire user base, and responds — all without human intervention for high-confidence threats.
+Vault is an **autonomous multi-agent security system** powered by Amazon Bedrock AgentCore that detects suspicious login attempts, investigates them across your entire user base, and responds — all without human intervention for high-confidence threats.
 
 It doesn't just flag threats. It thinks, coordinates, decides, and acts.
 

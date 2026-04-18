@@ -13,7 +13,7 @@ export default function ReportPage() {
         style={{ borderBottomWidth: "0.5px" }}
       >
         <span className="font-mono text-sm font-semibold tracking-wide text-[#ef4444]">
-          SENTINEL IQ
+          VAULT
         </span>
         <h1 className="min-w-0 flex-1 text-center font-mono text-sm font-medium text-[#9ca3af] md:text-base">
           Incident Report #INC-2047
@@ -39,7 +39,7 @@ export default function ReportPage() {
           </CardHeader>
           <CardContent className="text-sm leading-relaxed text-[#9ca3af]">
             <p>
-              On April 17, 2026, SentinelIQ detected a high-velocity credential-stuffing attempt against Acme Corp
+              On April 17, 2026, Vault detected a high-velocity credential-stuffing attempt against Acme Corp
               identity infrastructure. Automated agents correlated geo-velocity, device reputation, and MFA posture
               to isolate a hostile session originating from a Tor exit node in Romania. The session was terminated
               within four seconds of triage with zero lateral movement observed.

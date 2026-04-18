@@ -17,7 +17,7 @@ const plexMono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "SentinelIQ — Security Operations",
+  title: "Vault",
   description: "SOC dashboard for account takeover detection and response.",
 }
 

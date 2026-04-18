@@ -162,13 +162,13 @@ export function SocWarRoom() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#000000] text-[#ffffff]">
+    <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#000000] text-[#ffffff]">
       <header
         className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-[#1a0000] bg-[#000000] px-4 py-3 md:px-6"
         style={{ borderBottomWidth: "0.5px" }}
       >
         <span className="font-mono text-sm font-semibold tracking-wide text-[#ef4444]">
-          SENTINEL IQ
+          VAULT
         </span>
         <span className="min-w-0 flex-1 truncate px-2 text-center text-xs text-[#9ca3af] sm:text-sm">
           Acme Corp — Security Operations.
@@ -190,15 +190,15 @@ export function SocWarRoom() {
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 divide-y divide-[#2a0a0a] border-[#2a0a0a] lg:h-[calc(100dvh-57px)] lg:grid-cols-12 lg:divide-x lg:divide-y-0 lg:divide-[#2a0a0a]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 divide-y divide-[#2a0a0a] border-[#2a0a0a] overflow-hidden lg:grid-cols-12 lg:grid-rows-1 lg:divide-x lg:divide-y-0 lg:divide-[#2a0a0a]">
         {/* Left — accounts */}
-        <aside className="flex min-h-0 flex-col bg-[linear-gradient(to_bottom,#050000,#000000)] lg:col-span-3">
+        <aside className="flex min-h-0 max-h-[50dvh] flex-col overflow-hidden bg-[linear-gradient(to_bottom,#050000,#000000)] lg:col-span-3 lg:h-full lg:max-h-none">
           <div className="shrink-0 px-3 py-3">
             <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[#9ca3af]">
               Accounts at Risk
             </h2>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <ul className="flex flex-col gap-2">
               {incidents.map((inc) => {
                 const isSel = inc.id === selectedId
@@ -275,7 +275,7 @@ export function SocWarRoom() {
         </aside>
 
         {/* Center */}
-        <main className="flex min-h-0 flex-col gap-4 bg-[#000000] px-3 py-4 lg:col-span-6 lg:px-4">
+        <main className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-y-contain bg-[#000000] px-3 py-4 lg:col-span-6 lg:px-4">
           <div className="mx-auto w-full max-w-md shrink-0">
             <Globe
               markers={globeMarkers}
@@ -413,13 +413,13 @@ export function SocWarRoom() {
           >
             <CardContent className="space-y-2 pt-4 font-mono text-[11px] leading-relaxed text-[#9ca3af]">
               <div className="flex items-center justify-between text-[#ffffff]">
-                <span>SentinelIQ Bot</span>
+                <span>Vault Bot</span>
                 <span className="text-[10px] text-[#9ca3af]">now</span>
               </div>
               <p className="text-[10px] uppercase tracking-wide text-[#ef4444]">#security-alerts</p>
               <p className="text-[#ffffff]">
                 Unusual velocity login for {selected.emailRedacted} from {selected.city}. Automated triage
-                engaged — review in SentinelIQ.
+                engaged — review in Vault.
               </p>
             </CardContent>
           </Card>

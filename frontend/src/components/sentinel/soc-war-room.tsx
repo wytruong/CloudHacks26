@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Check } from "lucide-react"
+import { Check, LogOut } from "lucide-react"
 
 import { Globe } from "@/components/ui/cobe-globe"
 import { Badge } from "@/components/ui/badge"
@@ -242,7 +242,7 @@ export function SocWarRoom() {
           Vault
         </span>
         <span className="min-w-0 flex-1 truncate px-2 text-center text-xs text-[#9ca3af] sm:text-sm">
-          Acme Corp — Security Operations.
+          Definitely Safe Co — Security Operations.
         </span>
         <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
           <span className="text-[#9ca3af]">
@@ -258,6 +258,14 @@ export function SocWarRoom() {
               LIVE
             </span>
           </span>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="flex shrink-0 cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-[11px] text-[#9ca3af] hover:text-[#ef4444]"
+          >
+            <LogOut className="size-3.5 shrink-0" aria-hidden />
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -354,6 +362,12 @@ export function SocWarRoom() {
                 )
               })}
             </ul>
+          </div>
+          <div
+            className="shrink-0 bg-[#050000] text-center font-mono text-[10px] text-[#4b5563]"
+            style={{ borderTop: "0.5px solid #2a0a0a", padding: "8px 12px" }}
+          >
+            Vault v1.0 · UCI CloudHacks 2026
           </div>
         </aside>
 

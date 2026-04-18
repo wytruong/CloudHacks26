@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function ReportPage() {
   return (
-    <div className="min-h-screen bg-[#000000] text-[#ffffff]">
+    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-[#000000] text-[#ffffff]">
       <header
-        className="flex flex-wrap items-center justify-between gap-4 border-b border-[#2a0a0a] bg-[#000000] px-4 py-4 md:px-8"
+        className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-[#2a0a0a] bg-[#000000] px-4 py-4 md:px-8"
         style={{ borderBottomWidth: "0.5px" }}
       >
         <span
@@ -30,6 +30,7 @@ export default function ReportPage() {
         </Button>
       </header>
 
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <main className="mx-auto max-w-4xl space-y-4 px-4 py-8 md:px-8">
         <Card
           className="border border-[#2a0a0a] bg-[#0a0000] shadow-none"
@@ -198,14 +199,22 @@ export default function ReportPage() {
           </CardContent>
         </Card>
       </main>
+      </div>
 
-      <footer className="px-4 py-8 md:px-8">
+      <footer className="shrink-0 px-4 py-8 md:px-8">
         <Link
           href="/dashboard"
           className="font-mono text-xs text-[#ef4444] underline-offset-4 hover:underline"
         >
           Back to Dashboard
         </Link>
+      </footer>
+
+      <footer
+        className="w-full shrink-0 bg-[#000000] px-6 py-4 text-center font-mono text-[11px] text-[#4b5563]"
+        style={{ borderTop: "0.5px solid #2a0a0a" }}
+      >
+        {`Vault Security Platform · Generated ${new Date().toLocaleString()} · Incident #INC-2047 · Confidential`}
       </footer>
     </div>
   )

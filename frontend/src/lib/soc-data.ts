@@ -29,7 +29,7 @@ function threatMarker(id: string, lat: number, lng: number, label: string): Mark
 export const INITIAL_INCIDENTS: SocIncident[] = [
   {
     id: "bucharest",
-    emailRedacted: "j***@acme.com",
+    emailRedacted: "j***@definitelysafe.co",
     severity: "CRITICAL",
     city: "Bucharest",
     countryCode: "RO",
@@ -58,7 +58,7 @@ export const INITIAL_INCIDENTS: SocIncident[] = [
   },
   {
     id: "singapore",
-    emailRedacted: "s***@acme.com",
+    emailRedacted: "s***@definitelysafe.co",
     severity: "WARN",
     city: "Singapore",
     countryCode: "SG",
@@ -82,7 +82,7 @@ export const INITIAL_INCIDENTS: SocIncident[] = [
   },
   {
     id: "london",
-    emailRedacted: "m***@acme.com",
+    emailRedacted: "m***@definitelysafe.co",
     severity: "INFO",
     city: "London",
     countryCode: "UK",
@@ -105,7 +105,7 @@ export const INITIAL_INCIDENTS: SocIncident[] = [
   },
   {
     id: "moscow",
-    emailRedacted: "r***@acme.com",
+    emailRedacted: "r***@definitelysafe.co",
     severity: "CRITICAL",
     city: "Moscow",
     countryCode: "RU",
@@ -128,7 +128,7 @@ export const INITIAL_INCIDENTS: SocIncident[] = [
   },
   {
     id: "lagos",
-    emailRedacted: "k***@acme.com",
+    emailRedacted: "k***@definitelysafe.co",
     severity: "WARN",
     city: "Lagos",
     countryCode: "NG",
@@ -151,7 +151,7 @@ export const INITIAL_INCIDENTS: SocIncident[] = [
   },
   {
     id: "toronto",
-    emailRedacted: "t***@acme.com",
+    emailRedacted: "t***@definitelysafe.co",
     severity: "INFO",
     city: "Toronto",
     countryCode: "CA",
@@ -201,7 +201,7 @@ function randomSeverity(): Severity {
 function randomEmail(): string {
   const letters = "abcdefghijklmnopqrstuvwxyz"
   const a = letters[Math.floor(Math.random() * 26)]
-  return `${a}***@acme.com`
+  return `${a}***@definitelysafe.co`
 }
 
 export function createSyntheticIncident(): SocIncident {

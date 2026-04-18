@@ -185,3 +185,6 @@ python3 fire-events.py
 ```
 
 The script posts a sequence of synthetic logins to the HTTP API that invokes `vault-receive-event` (URL is defined at the top of `fire-events.py` — update it if your API changes).
+## 🌐 Live Demo
+
+https://vault-cloudhacks.vercel.app

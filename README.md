@@ -1,25 +1,23 @@
 ## Vault
 ### Autonomous Account Takeover Detection & Response — UCI CloudHacks 2026
 
-> "Vault doesn't just detect one attack. It recognizes when your entire platform is under coordinated attack — and shuts it down autonomously."
+> "Vault doesn't just detect one attack. It scores risky logins with explainable AI, blocks the obvious ones fast, and pulls humans in only when the signal is ambiguous."
 
 ---
 
 ## The Problem
 
-By the time an end user finds out their account was compromised, the damage is done. Existing tools detect threats but still require a human to investigate and respond manually. That takes hours. Attackers need seconds.
+By the time an end user finds out their account was compromised, the damage is often done. Existing tools detect threats but still require a human to investigate and respond manually. That takes hours. Attackers need seconds.
 
 **Average cost of a data breach: $4.88M. Average detection time: 194 days.**
 
-Vault closes that gap to 4 seconds.
+Vault closes that gap by scoring each login with Amazon Bedrock, persisting state in DynamoDB, notifying stakeholders over SNS, and streaming verdicts to a SOC war room over API Gateway WebSockets — with Amazon Rekognition as a safety net on borderline scores.
 
 ---
 
 ## What Vault Does
 
-Vault is an **autonomous multi-agent security system** powered by Amazon Bedrock AgentCore that detects suspicious login attempts, investigates them across your entire user base, and responds — all without human intervention for high-confidence threats.
-
-It doesn't just flag threats. It thinks, coordinates, decides, and acts.
+Vault is an **autonomous login-risk pipeline** that ingests login events (via an HTTP API on API Gateway), analyzes them with **Amazon Bedrock (Claude Sonnet 4.6)**, stores results in **Amazon DynamoDB**, sends **real email** via **Amazon SNS** (including OTP codes for human-in-the-loop steps), and pushes structured incidents to the **React SOC dashboard** in real time over **API Gateway WebSockets**. For **60–89% confidence** events, the analyst flow can trigger **Amazon Rekognition** face comparison against reference photos in **Amazon S3** (`vault-reference-photos`), with OTP verification handled by a second Lambda.
 
 ### Confidence Threshold System
 | Confidence | Action | Human Needed? |
@@ -33,38 +31,34 @@ It doesn't just flag threats. It thinks, coordinates, decides, and acts.
 ## Demo Scenarios
 
 **Single account attack (97% confidence — fully autonomous):**
-2AM login from Bucharest, Romania. Last login Irvine CA 6 hours ago. 5,700 miles apart. Device unknown. MFA failed. Blocked in 4 seconds.
-
-**Coordinated attack (Neptune graph detection):**
-Same IP hits 12 accounts within 3 minutes. Neptune traverses the account graph, finds every connected node, mass-protects all 12 simultaneously.
+2AM login from Bucharest, Romania. Last login Irvine CA 6 hours ago. 5,700 miles apart. Device unknown. MFA failed. Blocked in seconds; SNS email alert; incident appears on the SOC war room with full reasoning.
 
 **Borderline case (71% confidence — Rekognition):**
-Login from Singapore, known device but unusual hour. Rekognition requests a selfie. Stranger's face → auto-block. Real user → mark safe.
+Login from Singapore, known device but unusual hour. Rekognition requests a selfie against the S3 reference gallery. Wrong face → auto-block. Real user → mark safe after OTP verification.
 
 ---
 
 ## Architecture
 
 ```
-End User Login Event
+Simulation script (fire-events.py)
         ↓
-Amazon Kinesis Data Streams
+API Gateway HTTP → Lambda: vault-receive-event
         ↓
-Amazon EventBridge
+Amazon Bedrock (Claude Sonnet 4.6) — threat analysis + confidence
         ↓
-AWS Step Functions (orchestrates agent pipeline)
+Amazon DynamoDB (vault-events, vault-connections, vault-otp)
         ↓
-Bedrock AgentCore — Multi-Agent Pipeline
-  ├── Agent 1 — Triage (score individual event)
-  ├── Agent 2 — Cross-Account Scan (Neptune graph)
-  └── Agent 3 — Decision + Response
-      90%+  → auto-block + notify + report
-      60-89% → Rekognition selfie → analyst confirm
-      <60%  → silent flag
+Amazon SNS — email alerts (BLOCK) + OTP delivery
         ↓
-DynamoDB + S3
+API Gateway WebSocket — push incident payload → Next.js SOC dashboard
+
+Borderline path (60–89%):
+  Frontend camera capture
         ↓
-API Gateway WebSocket → React SOC Dashboard
+Amazon Rekognition (+ reference photos in S3: vault-reference-photos)
+        ↓
+Lambda: vault-verify-otp — OTP / verification step
 ```
 
 ---
@@ -73,17 +67,14 @@ API Gateway WebSocket → React SOC Dashboard
 
 | Layer | Technology |
 |---|---|
-| Frontend | React, TypeScript, Tailwind CSS, shadcn/ui, COBE |
-| Real-time Ingestion | Amazon Kinesis Data Streams |
-| Event Routing | Amazon EventBridge |
-| Orchestration | AWS Step Functions |
-| AI Agents | Amazon Bedrock AgentCore (Claude Sonnet 4.5) |
-| Graph Detection | Amazon Neptune |
-| Face Verification | Amazon Rekognition |
-| Compute | AWS Lambda |
-| Database | Amazon DynamoDB |
-| Storage | Amazon S3 |
-| Real-time Push | Amazon API Gateway WebSocket |
+| Frontend | React, TypeScript, Next.js, Tailwind CSS, shadcn/ui, COBE globe, Framer Motion |
+| Screens | Login (lamp effect), SOC war room dashboard, incident report |
+| AI analysis | Amazon Bedrock — Claude Sonnet 4.6 |
+| Face verification | Amazon Rekognition + Amazon S3 (`vault-reference-photos`) |
+| Compute | AWS Lambda (`vault-receive-event`, `vault-verify-otp`) |
+| Database | Amazon DynamoDB (`vault-events`, `vault-connections`, `vault-otp`) |
+| Notifications | Amazon SNS (BLOCK alerts, OTP codes) |
+| APIs | API Gateway WebSocket (real-time UI), API Gateway HTTP (simulation / ingest) |
 | Region | us-west-2 |
 
 ---
@@ -92,9 +83,8 @@ API Gateway WebSocket → React SOC Dashboard
 
 | Name | Role | Owns |
 |---|---|---|
-| My Truong | Frontend + Integration | 3 screens, COBE globe, WebSocket, demo |
-| Jenny | AWS Backend | Kinesis, AgentCore, Neptune, Rekognition, Step Functions, DynamoDB |
-| Person 3 | Data + Docs | demo-events.json, simulation script, Devpost, architecture diagram |
+| My Truong | Frontend + Full Stack | Next.js app (3 screens), WebSocket client, simulation → HTTP API wiring, end-to-end demo |
+| Jenny | AWS / ML integration | Amazon Rekognition flow for 60–89% confidence verification |
 
 ---
 
@@ -103,7 +93,7 @@ API Gateway WebSocket → React SOC Dashboard
 ```json
 POST /api/login-event
 {
-  "accountId": "j***@acme.com",
+  "accountId": "j***@definitelysafe.co",
   "ip": "185.220.101.47",
   "location": [44.4268, 26.1025],
   "city": "Bucharest",
@@ -145,45 +135,53 @@ WebSocket Response:
 ```
 CloudHacks26/
 ├── frontend/
-│   ├── components/ui/
-│   │   ├── cobe-globe.tsx
-│   │   └── cobe-globe-pulse.tsx
-│   ├── screens/
-│   │   ├── Login.tsx
-│   │   ├── Dashboard.tsx
-│   │   └── IncidentReport.tsx
-│   ├── hooks/
-│   │   └── useWebSocket.ts
-│   └── App.tsx
-├── backend/
-│   ├── kinesis-consumer/
-│   ├── agents/
-│   │   ├── triage-agent/
-│   │   ├── cross-account-agent/
-│   │   └── decision-agent/
-│   ├── step-functions/pipeline.json
-│   ├── rekognition/
-│   └── websocket-api/
+│   ├── src/
+│   │   ├── app/                 # Next.js routes (/, /dashboard, /report)
+│   │   ├── components/
+│   │   │   ├── sentinel/        # login-screen, soc-war-room
+│   │   │   └── ui/              # shadcn + lamp, COBE globe, etc.
+│   │   ├── hooks/
+│   │   │   └── useWebSocket.ts  # WebSocket URL + incident mapping
+│   │   └── lib/
+│   │       └── soc-data.ts      # types + seed copy
+│   └── package.json
 ├── simulation/
-│   ├── demo-events.json
-│   └── fire-events.py
+│   └── fire-events.py           # POSTs demo events to API Gateway HTTP
 └── README.md
 ```
 
 ## Track Targets
 
-- **AWS Track** — Primary (Kinesis + AgentCore + Neptune + Rekognition + Step Functions)
-- **Best AI Safety Track** — Secondary (explainable AI, human-in-loop, Rekognition safety net, coordinated attack protection)
+- **AWS Track** — Primary (Lambda, Bedrock, DynamoDB, API Gateway WebSocket + HTTP, SNS, S3, Rekognition)
+- **Best AI Safety Track** — Secondary (explainable reasoning from Bedrock, human-in-the-loop + Rekognition on 60–89% band)
 
 ---
 
 UCI CloudHacks 2026 — 72 hours — April 17–20, 2026
 
-## 🚀 Getting Started
+## Getting Started
 
+**Prerequisites:** Node.js 20+, npm, and (optional) Python 3 with `requests` for the simulation script.
+
+**Run the frontend (SOC UI):**
+
+```bash
 git clone https://github.com/wytruong/CloudHacks26
 cd CloudHacks26/frontend
 npm install
 npm run dev
+```
 
-Open http://localhost:3000 in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser. Use `/` for the lamp login, `/dashboard` for the war room, and `/report` for the incident report view.
+
+**Real-time data:** the dashboard expects the deployed API Gateway WebSocket endpoint configured in `frontend/src/hooks/useWebSocket.ts`. Point that constant at your own stage if you redeploy the backend.
+
+**Fire demo login events:**
+
+```bash
+cd CloudHacks26/simulation
+python3 -m pip install requests   # once, if needed
+python3 fire-events.py
+```
+
+The script posts a sequence of synthetic logins to the HTTP API that invokes `vault-receive-event` (URL is defined at the top of `fire-events.py` — update it if your API changes).

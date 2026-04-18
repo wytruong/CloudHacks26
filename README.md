@@ -178,3 +178,12 @@ CloudHacks26/
 ---
 
 UCI CloudHacks 2026 — 72 hours — April 17–20, 2026
+
+## 🚀 Getting Started
+
+git clone https://github.com/wytruong/CloudHacks26
+cd CloudHacks26/frontend
+npm install
+npm run dev
+
+Open http://localhost:3000 in your browser.

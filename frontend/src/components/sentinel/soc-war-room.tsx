@@ -14,6 +14,11 @@ import { INITIAL_INCIDENTS, type Severity } from "@/lib/soc-data"
 const PIPELINE_STEP_MS = 600
 const TYPEWRITER_MS = 800
 
+/** Stable tuple refs for Globe — inline arrays would change identity every render. */
+const SOC_GLOBE_BASE: [number, number, number] = [0.32, 0.35, 0.4]
+const SOC_GLOBE_MARKER: [number, number, number] = [0.2, 0.78, 0.9]
+const SOC_GLOBE_GLOW: [number, number, number] = [0.02, 0.03, 0.06]
+
 type PipelineStatus = "pending" | "active" | "complete"
 
 function arcRgbForSeverity(s: Severity): [number, number, number] {
@@ -51,6 +56,13 @@ export function SocWarRoom() {
   const selected = useMemo(
     () => incidents.find((i) => i.id === selectedId) ?? incidents[0]!,
     [incidents, selectedId]
+  )
+
+  const globeMarkers = useMemo(() => selected.markers, [selected.markers])
+  const globeArcs = useMemo(() => selected.arcs, [selected.arcs])
+  const globeArcColor = useMemo(
+    () => arcRgbForSeverity(selected.severity),
+    [selected.severity]
   )
 
   const clearTimers = useCallback(() => {
@@ -149,42 +161,40 @@ export function SocWarRoom() {
     })
   }
 
-  const arcColor = arcRgbForSeverity(selected.severity)
-
   return (
-    <div className="flex min-h-screen flex-col bg-[#0a0e1a] text-foreground">
+    <div className="flex min-h-screen flex-col bg-[#000000] text-[#ffffff]">
       <header
-        className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-[#1e2a44] bg-[#0f1424] px-4 py-3 md:px-6"
+        className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-[#1a0000] bg-[#000000] px-4 py-3 md:px-6"
         style={{ borderBottomWidth: "0.5px" }}
       >
-        <span className="font-mono text-sm font-semibold tracking-wide text-[#4a9eff]">
+        <span className="font-mono text-sm font-semibold tracking-wide text-[#ef4444]">
           SENTINEL IQ
         </span>
-        <span className="min-w-0 flex-1 truncate px-2 text-center text-xs text-muted-foreground sm:text-sm">
+        <span className="min-w-0 flex-1 truncate px-2 text-center text-xs text-[#9ca3af] sm:text-sm">
           Acme Corp — Security Operations.
         </span>
         <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
-          <span className="text-muted-foreground">
-            Analyst: <span className="text-foreground">My Truong</span>
+          <span className="text-[#9ca3af]">
+            Analyst: <span className="text-[#ffffff]">My Truong</span>
           </span>
-          <span className="font-mono text-[#f59e0b]">{formatClock(now)}</span>
+          <span className="font-mono text-[#ef4444]">{formatClock(now)}</span>
           <span className="flex items-center gap-2">
             <span
-              className="sentinel-live-dot size-[7px] shrink-0 rounded-full bg-[#22c55e]"
+              className="sentinel-live-dot size-[7px] shrink-0 rounded-full bg-[#ef4444]"
               aria-hidden
             />
-            <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-[#22c55e]">
+            <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-[#ef4444]">
               LIVE
             </span>
           </span>
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 divide-y divide-[#1e2a44] border-[#1e2a44] lg:h-[calc(100dvh-57px)] lg:grid-cols-12 lg:divide-x lg:divide-y-0 lg:divide-[#1e2a44]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 divide-y divide-[#2a0a0a] border-[#2a0a0a] lg:h-[calc(100dvh-57px)] lg:grid-cols-12 lg:divide-x lg:divide-y-0 lg:divide-[#2a0a0a]">
         {/* Left — accounts */}
-        <aside className="flex min-h-0 flex-col bg-[#0a0e1a] lg:col-span-3">
+        <aside className="flex min-h-0 flex-col bg-[linear-gradient(to_bottom,#050000,#000000)] lg:col-span-3">
           <div className="shrink-0 px-3 py-3">
-            <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[#9ca3af]">
               Accounts at Risk
             </h2>
           </div>
@@ -201,30 +211,33 @@ export function SocWarRoom() {
                       type="button"
                       onClick={() => onSelectRow(inc.id)}
                       className={[
-                        "w-full rounded-md border border-[#1e2a44] bg-[#0f1424] p-3 text-left transition-colors hover:bg-[#12192c]",
-                        isSel ? "ring-1 ring-[#1e2a44]" : "",
+                        "w-full rounded-md border border-[#2a0a0a] p-3 text-left transition-colors",
+                        isSel
+                          ? "bg-[linear-gradient(to_right,#1a0000,#0a0000)]"
+                          : "bg-[linear-gradient(to_right,#0f0000,#0a0000)] hover:bg-[linear-gradient(to_right,#1a0000,#0a0000)]",
                         isWs ? "sentinel-fade-in" : "",
                         pulseBucharest ? "sentinel-row-pulse" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                       style={{
-                        borderLeftWidth: "3px",
+                        borderLeftWidth: isSel ? "2px" : "3px",
                         borderLeftStyle: "solid",
-                        borderLeftColor:
-                          inc.severity === "CRITICAL"
-                            ? "rgb(239 68 68 / 0.9)"
+                        borderLeftColor: isSel
+                          ? "#ef4444"
+                          : inc.severity === "CRITICAL"
+                            ? "#7f1d1d"
                             : inc.severity === "WARN"
-                              ? "rgb(245 158 11 / 0.9)"
-                              : "rgb(59 130 246 / 0.9)",
+                              ? "#92400e"
+                              : "#6b7280",
                       }}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="truncate font-mono text-xs text-foreground">{inc.emailRedacted}</span>
+                        <span className="truncate font-mono text-xs text-[#ffffff]">{inc.emailRedacted}</span>
                         {blocked ? (
                           <Badge
                             variant="secondary"
-                            className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground"
+                            className="border-[#2a0a0a] bg-[#0a0000] font-mono text-[10px] uppercase tracking-wide text-[#9ca3af]"
                           >
                             BLOCKED
                           </Badge>
@@ -232,10 +245,13 @@ export function SocWarRoom() {
                           <Badge
                             variant="outline"
                             className={[
-                              "font-mono text-[10px] uppercase tracking-wide",
-                              inc.severity === "CRITICAL" && "border-[#ef4444]/40 text-[#ef4444]",
-                              inc.severity === "WARN" && "border-[#f59e0b]/40 text-[#f59e0b]",
-                              inc.severity === "INFO" && "border-[#3b82f6]/40 text-[#3b82f6]",
+                              "border-[0.5px] font-mono text-[10px] uppercase tracking-wide",
+                              inc.severity === "CRITICAL" &&
+                                "border-[#ef4444] bg-[#2a0a0a] text-[#ef4444]",
+                              inc.severity === "WARN" &&
+                                "border-[#f59e0b] bg-[#1a0800] text-[#f59e0b]",
+                              inc.severity === "INFO" &&
+                                "border-[#6b7280] bg-[#0a0a0a] text-[#9ca3af]",
                             ]
                               .filter(Boolean)
                               .join(" ")}
@@ -244,7 +260,7 @@ export function SocWarRoom() {
                           </Badge>
                         )}
                       </div>
-                      <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                      <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[#9ca3af]">
                         <span>
                           {inc.flag} {inc.city} {inc.countryCode}
                         </span>
@@ -259,31 +275,41 @@ export function SocWarRoom() {
         </aside>
 
         {/* Center */}
-        <main className="flex min-h-0 flex-col gap-4 bg-[#0a0e1a] px-3 py-4 lg:col-span-6 lg:px-4">
+        <main className="flex min-h-0 flex-col gap-4 bg-[#000000] px-3 py-4 lg:col-span-6 lg:px-4">
           <div className="mx-auto w-full max-w-md shrink-0">
             <Globe
-              markers={selected.markers}
-              arcs={selected.arcs}
+              markers={globeMarkers}
+              arcs={globeArcs}
               dark={1}
-              baseColor={[0.32, 0.35, 0.4]}
-              markerColor={[0.2, 0.78, 0.9]}
-              arcColor={arcColor}
-              glowColor={[0.02, 0.03, 0.06]}
+              baseColor={SOC_GLOBE_BASE}
+              markerColor={SOC_GLOBE_MARKER}
+              arcColor={globeArcColor}
+              glowColor={SOC_GLOBE_GLOW}
               mapBrightness={10}
               markerElevation={0.01}
-              speed={0.003}
+              speed={0.002}
               theta={0.2}
               className="w-full"
             />
           </div>
           <div className="flex justify-center">
-            <span className="sentinel-threat-badge inline-flex items-center rounded-md border border-[#ef4444]/50 bg-[#ef4444]/10 px-3 py-1 font-mono text-[10px] font-semibold tracking-widest text-[#ef4444]">
+            <span className="sentinel-threat-badge inline-flex items-center rounded-md border border-[#ef4444] bg-[#2a0a0a] px-3 py-1 font-mono text-[10px] font-semibold tracking-widest text-[#ef4444]">
               THREAT DETECTED
             </span>
           </div>
 
-          <div className="rounded-lg border border-[#1e2a44] bg-[#0f1424] p-4" style={{ borderWidth: "0.5px" }}>
-            <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div
+            className="rounded-lg border border-[#2a0a0a] p-4"
+            style={{
+              borderWidth: "0.5px",
+              backgroundImage:
+                "linear-gradient(to right, rgb(239 68 68 / 1), transparent), linear-gradient(to right, #1a0000, #000000)",
+              backgroundSize: "100% 1px, 100% 100%",
+              backgroundPosition: "top left, 0 0",
+              backgroundRepeat: "no-repeat, no-repeat",
+            }}
+          >
+            <p className="mb-3 font-mono text-[10px] uppercase tracking-wider text-[#9ca3af]">
               Agent Pipeline
             </p>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -294,20 +320,23 @@ export function SocWarRoom() {
                     <div
                       className={[
                         "flex min-h-[52px] flex-1 flex-col justify-center rounded-md border px-2 py-2 text-center font-mono text-[11px] leading-tight",
-                        st === "pending" && "border-[#1e2a44] bg-[#0a0e1a] text-muted-foreground",
-                        st === "active" && "sentinel-step-pulse border-[#4a9eff]/70 bg-[#0a0e1a] text-[#4a9eff]",
-                        st === "complete" && "border-[#22c55e]/40 bg-[#0a0e1a] text-[#22c55e]",
+                        st === "pending" &&
+                          "border-[0.5px] border-[#2a0a0a] bg-[linear-gradient(to_bottom,#0a0000,#000000)] text-[#9ca3af]",
+                        st === "active" &&
+                          "sentinel-step-pulse border-[0.5px] border-[#2a0a0a] bg-[linear-gradient(to_bottom,#0a0000,#000000)] text-[#9ca3af]",
+                        st === "complete" &&
+                          "border-[0.5px] border-[#ef4444] bg-[linear-gradient(to_bottom,#1a0000,#0a0000)] text-[#ef4444]",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                     >
                       <span className="flex items-center justify-center gap-1">
-                        {st === "complete" && <Check className="size-3.5 shrink-0 text-[#22c55e]" />}
+                        {st === "complete" && <Check className="size-3.5 shrink-0 text-[#ef4444]" />}
                         {label}
                       </span>
                     </div>
                     {idx < 2 && (
-                      <span className="hidden font-mono text-muted-foreground sm:inline" aria-hidden>
+                      <span className="hidden font-mono text-[#7f1d1d] sm:inline" aria-hidden>
                         →
                       </span>
                     )}
@@ -318,26 +347,26 @@ export function SocWarRoom() {
           </div>
 
           <div
-            className="min-h-[140px] flex-1 rounded-lg border border-[#1e2a44] bg-[#0f1424] p-4 font-mono text-xs leading-relaxed text-[#22c55e]"
+            className="min-h-[140px] flex-1 rounded-lg border border-[#2a0a0a] bg-[#0a0000] p-4 font-mono text-xs leading-relaxed text-[#ef4444]"
             style={{ borderWidth: "0.5px" }}
           >
             {visibleLines.map((line) => (
-              <p key={line} className="border-b border-[#1e2a44]/40 py-1 last:border-0">
+              <p key={line} className="border-b border-[#2a0a0a]/80 py-1 text-[#ef4444] last:border-0">
                 {line}
               </p>
             ))}
             {!isBlocked && visibleLines.length === 0 && (
-              <p className="text-muted-foreground">Awaiting agent trace…</p>
+              <p className="text-[#9ca3af]">Awaiting agent trace…</p>
             )}
           </div>
 
           {showSelfie && selected.requiresSelfieReview && (
             <Card
-              className="border border-[#1e2a44] bg-[#0f1424] shadow-none"
+              className="border border-[#2a0a0a] bg-[#0a0000] shadow-none"
               style={{ borderWidth: "0.5px" }}
             >
               <CardContent className="space-y-3 pt-4">
-                <p className="font-mono text-xs text-foreground">Selfie verification requested</p>
+                <p className="font-mono text-xs text-[#ffffff]">Selfie verification requested</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     type="button"
@@ -377,18 +406,18 @@ export function SocWarRoom() {
         </main>
 
         {/* Right */}
-        <aside className="flex min-h-0 flex-col gap-3 bg-[#0a0e1a] p-3 lg:col-span-3">
+        <aside className="flex min-h-0 flex-col gap-3 bg-[#050000] p-3 lg:col-span-3">
           <Card
-            className="border border-[#1e2a44] bg-[#0f1424] shadow-none"
-            style={{ borderWidth: "0.5px", borderLeftWidth: "2px", borderLeftColor: "#a855f7" }}
+            className="border border-[#2a0a0a] bg-[#0a0000] shadow-none"
+            style={{ borderWidth: "0.5px", borderLeftWidth: "3px", borderLeftColor: "#ef4444" }}
           >
-            <CardContent className="space-y-2 pt-4 font-mono text-[11px] leading-relaxed text-muted-foreground">
-              <div className="flex items-center justify-between text-foreground">
+            <CardContent className="space-y-2 pt-4 font-mono text-[11px] leading-relaxed text-[#9ca3af]">
+              <div className="flex items-center justify-between text-[#ffffff]">
                 <span>SentinelIQ Bot</span>
-                <span className="text-[10px] text-muted-foreground">now</span>
+                <span className="text-[10px] text-[#9ca3af]">now</span>
               </div>
-              <p className="text-[10px] uppercase tracking-wide text-[#a855f7]">#security-alerts</p>
-              <p className="text-foreground">
+              <p className="text-[10px] uppercase tracking-wide text-[#ef4444]">#security-alerts</p>
+              <p className="text-[#ffffff]">
                 Unusual velocity login for {selected.emailRedacted} from {selected.city}. Automated triage
                 engaged — review in SentinelIQ.
               </p>
@@ -396,50 +425,49 @@ export function SocWarRoom() {
           </Card>
 
           <Card
-            className="border border-[#1e2a44] bg-[#0f1424] shadow-none"
+            className="border border-[#2a0a0a] bg-[#0a0000] shadow-none"
             style={{ borderWidth: "0.5px" }}
           >
             <CardContent className="space-y-2 pt-4">
-              <p className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Email preview</p>
-              <p className="text-sm font-medium text-foreground">Unusual login detected on your account</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-mono text-[10px] uppercase tracking-wide text-[#9ca3af]">Email preview</p>
+              <p className="text-sm font-medium text-[#ffffff]">Unusual login detected on your account</p>
+              <p className="text-xs text-[#9ca3af]">
                 We blocked a suspicious session from {selected.city}, {selected.countryCode}. If this was not you,
                 no action is required.
               </p>
-              <p className="font-mono text-[11px] text-muted-foreground">To: {selected.emailRedacted}</p>
+              <p className="font-mono text-[11px] text-[#9ca3af]">To: {selected.emailRedacted}</p>
             </CardContent>
           </Card>
 
           <Card
-            className="border border-[#14532d] bg-[#052e16] shadow-none"
+            className="border border-[#7f1d1d] bg-[#0a0000] shadow-none"
             style={{ borderWidth: "0.5px" }}
           >
             <CardContent className="space-y-3 pt-4">
-              <Badge className="border-0 bg-[#166534] font-mono text-[10px] uppercase tracking-wide text-white hover:bg-[#166534]">
+              <Badge className="border-0 bg-[#2a0a0a] font-mono text-[10px] uppercase tracking-wide text-[#ef4444] hover:bg-[#2a0a0a]">
                 Incident Resolved
               </Badge>
-              <dl className="grid grid-cols-1 gap-2 font-mono text-[11px] text-[#bbf7d0]">
+              <dl className="grid grid-cols-1 gap-2 font-mono text-[11px] text-[#9ca3af]">
                 <div className="flex justify-between gap-2">
                   <dt>Response Time</dt>
-                  <dd>4s</dd>
+                  <dd className="text-[#ffffff]">4s</dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt>Records Protected</dt>
-                  <dd>3000</dd>
+                  <dd className="text-[#ffffff]">3000</dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt>Damage Avoided</dt>
-                  <dd>$47000</dd>
+                  <dd className="text-[#ffffff]">$47000</dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt>Logged</dt>
-                  <dd>DynamoDB + S3</dd>
+                  <dd className="text-[#ffffff]">DynamoDB + S3</dd>
                 </div>
               </dl>
               <Button
                 type="button"
-                variant="outline"
-                className="w-full border-[#22c55e]/40 font-mono text-xs text-[#bbf7d0] hover:bg-[#14532d]/50"
+                className="w-full border-0 bg-[#ef4444] font-mono text-xs text-[#ffffff] hover:bg-[#dc2626]"
                 onClick={() => router.push("/report")}
               >
                 View Full Report
@@ -456,10 +484,10 @@ export function SocWarRoom() {
             ].map(([k, label]) => (
               <div
                 key={label}
-                className="min-w-[calc(50%-4px)] flex-1 rounded-full border border-[#1e2a44] bg-[#0f1424] px-2 py-2 text-center font-mono text-[10px] text-muted-foreground sm:min-w-0"
+                className="min-w-[calc(50%-4px)] flex-1 rounded-full border border-[#2a0a0a] bg-[#0a0000] px-2 py-2 text-center font-mono text-[10px] text-[#9ca3af] sm:min-w-0"
                 style={{ borderWidth: "0.5px" }}
               >
-                <span className="block text-sm font-semibold text-foreground">{k}</span>
+                <span className="block text-sm font-semibold text-[#ffffff]">{k}</span>
                 {label}
               </div>
             ))}

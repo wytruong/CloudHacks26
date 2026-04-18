@@ -25,6 +25,9 @@ const TYPEWRITER_MS = 800
 const VERIFY_OTP_URL =
   "https://pou67ig3wd.execute-api.us-west-2.amazonaws.com/default/vault-verify-otp"
 
+const REKOGNITION_URL =
+  "https://tza8pyb17g.execute-api.us-west-2.amazonaws.com/default/vault-receive-event"
+
 const EMPTY_OTP = ["", "", "", "", "", ""] as const
 
 /** Stable tuple refs for Globe — inline arrays would change identity every render. */
@@ -95,6 +98,12 @@ export function SocWarRoom() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [otpDigits, setOtpDigits] = useState<string[]>(() => [...EMPTY_OTP])
   const [otpPhase, setOtpPhase] = useState<"entry" | "loading" | "success" | "failure">("entry")
+  const [cameraFaceVerified, setCameraFaceVerified] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const [cameraAfterCapture, setCameraAfterCapture] = useState(false)
+  const [cameraPreviewUrl, setCameraPreviewUrl] = useState<string | null>(null)
+  const [cameraImageBase64, setCameraImageBase64] = useState<string | null>(null)
+  const [rekogPhase, setRekogPhase] = useState<"idle" | "loading" | "success" | "failure">("idle")
   const isBlocked = blockedIds.has(selectedId)
 
   const pipelineTimers = useRef<number[]>([])
@@ -102,6 +111,9 @@ export function SocWarRoom() {
   const toastTimerRef = useRef<number | null>(null)
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([])
   const blockAfterOtpFailRef = useRef<number | null>(null)
+  const blockAfterCameraFailRef = useRef<number | null>(null)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const selected = useMemo(
     () => incidents.find((i) => i.id === selectedId) ?? incidents[0]!,
@@ -172,6 +184,10 @@ export function SocWarRoom() {
         window.clearTimeout(blockAfterOtpFailRef.current)
         blockAfterOtpFailRef.current = null
       }
+      if (blockAfterCameraFailRef.current != null) {
+        window.clearTimeout(blockAfterCameraFailRef.current)
+        blockAfterCameraFailRef.current = null
+      }
     }
   }, [])
 
@@ -218,19 +234,71 @@ export function SocWarRoom() {
     return () => window.clearTimeout(t)
   }, [visibleLines.length, selected.requiresSelfieReview, selected.reasoning.length, isBlocked])
 
+  function stopCameraStream() {
+    cameraStreamRef.current?.getTracks().forEach((t) => t.stop())
+    cameraStreamRef.current = null
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }
+
   useEffect(() => {
     if (!showSelfie || !selected.requiresSelfieReview) return
     setOtpDigits([...EMPTY_OTP])
     setOtpPhase("entry")
+    setCameraFaceVerified(false)
+    setCameraOpen(false)
+    setCameraAfterCapture(false)
+    setCameraPreviewUrl(null)
+    setCameraImageBase64(null)
+    setRekogPhase("idle")
+    stopCameraStream()
     if (blockAfterOtpFailRef.current != null) {
       window.clearTimeout(blockAfterOtpFailRef.current)
       blockAfterOtpFailRef.current = null
+    }
+    if (blockAfterCameraFailRef.current != null) {
+      window.clearTimeout(blockAfterCameraFailRef.current)
+      blockAfterCameraFailRef.current = null
     }
     const id = window.requestAnimationFrame(() => {
       otpInputRefs.current[0]?.focus()
     })
     return () => window.cancelAnimationFrame(id)
   }, [showSelfie, selected.requiresSelfieReview, selectedId])
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showSelfie || !selected.requiresSelfieReview || !cameraOpen || cameraAfterCapture) {
+      stopCameraStream()
+      return
+    }
+    let cancelled = false
+    void navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "user" }, audio: false })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop())
+          return
+        }
+        cameraStreamRef.current = stream
+        const el = videoRef.current
+        if (el) {
+          el.srcObject = stream
+          void el.play().catch(() => {})
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+      stopCameraStream()
+    }
+  }, [showSelfie, selected.requiresSelfieReview, cameraOpen, cameraAfterCapture])
 
   function onSelectRow(id: string) {
     setSelectedId(id)
@@ -317,6 +385,17 @@ export function SocWarRoom() {
           window.clearTimeout(blockAfterOtpFailRef.current)
           blockAfterOtpFailRef.current = null
         }
+        if (blockAfterCameraFailRef.current != null) {
+          window.clearTimeout(blockAfterCameraFailRef.current)
+          blockAfterCameraFailRef.current = null
+        }
+        stopCameraStream()
+        setCameraOpen(false)
+        setCameraAfterCapture(false)
+        setCameraPreviewUrl(null)
+        setCameraImageBase64(null)
+        setRekogPhase("idle")
+        setCameraFaceVerified(false)
         setOtpPhase("success")
         onMarkSafe()
         return
@@ -337,6 +416,77 @@ export function SocWarRoom() {
       blockAfterOtpFailRef.current = window.setTimeout(() => {
         onBlockSession()
         blockAfterOtpFailRef.current = null
+      }, 3000)
+    }
+  }
+
+  function onTakeCameraPhoto() {
+    const v = videoRef.current
+    if (!v || v.videoWidth === 0 || v.videoHeight === 0) return
+    const canvas = document.createElement("canvas")
+    canvas.width = v.videoWidth
+    canvas.height = v.videoHeight
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.drawImage(v, 0, 0)
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92)
+    const raw = dataUrl.replace(/^data:image\/jpeg;base64,/, "")
+    setCameraImageBase64(raw)
+    setCameraPreviewUrl(dataUrl)
+    setCameraAfterCapture(true)
+    stopCameraStream()
+  }
+
+  async function onVerifyFace() {
+    if (!cameraImageBase64 || rekogPhase === "loading") return
+    setRekogPhase("loading")
+    try {
+      const res = await fetch(REKOGNITION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "rekognition",
+          accountId: selected.emailRedacted,
+          image: cameraImageBase64,
+        }),
+      })
+      const data = (await res.json()) as { verified?: boolean }
+      if (data.verified === true) {
+        if (blockAfterCameraFailRef.current != null) {
+          window.clearTimeout(blockAfterCameraFailRef.current)
+          blockAfterCameraFailRef.current = null
+        }
+        if (blockAfterOtpFailRef.current != null) {
+          window.clearTimeout(blockAfterOtpFailRef.current)
+          blockAfterOtpFailRef.current = null
+        }
+        stopCameraStream()
+        setCameraOpen(false)
+        setCameraAfterCapture(false)
+        setCameraPreviewUrl(null)
+        setCameraImageBase64(null)
+        setRekogPhase("idle")
+        setCameraFaceVerified(true)
+        setOtpPhase("success")
+        onMarkSafe()
+        return
+      }
+      setRekogPhase("failure")
+      if (blockAfterCameraFailRef.current != null) {
+        window.clearTimeout(blockAfterCameraFailRef.current)
+      }
+      blockAfterCameraFailRef.current = window.setTimeout(() => {
+        onBlockSession()
+        blockAfterCameraFailRef.current = null
+      }, 3000)
+    } catch {
+      setRekogPhase("failure")
+      if (blockAfterCameraFailRef.current != null) {
+        window.clearTimeout(blockAfterCameraFailRef.current)
+      }
+      blockAfterCameraFailRef.current = window.setTimeout(() => {
+        onBlockSession()
+        blockAfterCameraFailRef.current = null
       }, 3000)
     }
   }
@@ -620,7 +770,11 @@ export function SocWarRoom() {
                 {otpPhase === "success" ? (
                   <div className="flex items-center gap-2 font-mono text-sm text-[#22c55e]">
                     <Check className="size-5 shrink-0" aria-hidden />
-                    <span>Identity confirmed. Marking safe.</span>
+                    <span>
+                      {cameraFaceVerified
+                        ? "Face matched. Identity confirmed."
+                        : "Identity confirmed. Marking safe."}
+                    </span>
                   </div>
                 ) : (
                   <>
@@ -680,6 +834,86 @@ export function SocWarRoom() {
                     >
                       Send new code
                     </button>
+
+                    <div className="relative flex items-center justify-center py-2">
+                      <div
+                        className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-[#2a0a0a]"
+                        style={{ height: "0.5px" }}
+                        aria-hidden
+                      />
+                      <span className="relative bg-[#0a0000] px-2 font-mono text-[11px] text-[#9ca3af]">OR</span>
+                    </div>
+
+                    {!cameraOpen ? (
+                      <button
+                        type="button"
+                        disabled={otpPhase === "loading" || otpPhase === "failure"}
+                        className="w-full rounded border border-[#ef4444] bg-transparent py-2 font-mono text-[11px] text-[#ef4444] disabled:opacity-50"
+                        style={{ borderWidth: "0.5px" }}
+                        onClick={() => {
+                          setCameraOpen(true)
+                          setCameraAfterCapture(false)
+                          setCameraPreviewUrl(null)
+                          setCameraImageBase64(null)
+                          setRekogPhase("idle")
+                        }}
+                      >
+                        Verify with Camera
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        {!cameraAfterCapture ? (
+                          <>
+                            <video
+                              ref={videoRef}
+                              className="w-full rounded object-cover"
+                              style={{ border: "0.5px solid #2a0a0a", borderRadius: "4px" }}
+                              autoPlay
+                              playsInline
+                              muted
+                            />
+                            <Button
+                              type="button"
+                              className="w-full border-0 bg-[#ef4444] font-mono text-sm text-[#ffffff] hover:bg-[#dc2626]"
+                              onClick={onTakeCameraPhoto}
+                            >
+                              Take Photo
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {cameraPreviewUrl != null ? (
+                              <img
+                                src={cameraPreviewUrl}
+                                alt="Captured preview"
+                                className="w-full rounded object-cover"
+                                style={{ border: "0.5px solid #2a0a0a", borderRadius: "4px" }}
+                              />
+                            ) : null}
+                            {rekogPhase === "loading" ? (
+                              <p className="text-center font-mono text-sm text-[#9ca3af]">Analyzing face...</p>
+                            ) : null}
+                            {rekogPhase === "failure" ? (
+                              <p className="font-mono text-sm text-[#ef4444]">
+                                Face not recognized. Session will be blocked.
+                              </p>
+                            ) : null}
+                            <Button
+                              type="button"
+                              disabled={
+                                rekogPhase === "loading" ||
+                                rekogPhase === "failure" ||
+                                cameraImageBase64 == null
+                              }
+                              className="w-full border-0 bg-[#ef4444] font-mono text-sm text-[#ffffff] hover:bg-[#dc2626] disabled:opacity-60"
+                              onClick={() => void onVerifyFace()}
+                            >
+                              Verify Face
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </CardContent>

@@ -1,7 +1,15 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react"
 import { Check, LogOut } from "lucide-react"
 
 import { Globe } from "@/components/ui/cobe-globe"
@@ -13,6 +21,11 @@ import { INITIAL_INCIDENTS, type Severity } from "@/lib/soc-data"
 
 const PIPELINE_STEP_MS = 600
 const TYPEWRITER_MS = 800
+
+const VERIFY_OTP_URL =
+  "https://pou67ig3wd.execute-api.us-west-2.amazonaws.com/default/vault-verify-otp"
+
+const EMPTY_OTP = ["", "", "", "", "", ""] as const
 
 /** Stable tuple refs for Globe — inline arrays would change identity every render. */
 const SOC_GLOBE_BASE: [number, number, number] = [0.32, 0.35, 0.4]
@@ -80,11 +93,15 @@ export function SocWarRoom() {
   const [activeThreatCount, setActiveThreatCount] = useState(4)
   const [blockedTodayCount, setBlockedTodayCount] = useState(12)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [otpDigits, setOtpDigits] = useState<string[]>(() => [...EMPTY_OTP])
+  const [otpPhase, setOtpPhase] = useState<"entry" | "loading" | "success" | "failure">("entry")
   const isBlocked = blockedIds.has(selectedId)
 
   const pipelineTimers = useRef<number[]>([])
   const typewriterTimers = useRef<number[]>([])
   const toastTimerRef = useRef<number | null>(null)
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const blockAfterOtpFailRef = useRef<number | null>(null)
 
   const selected = useMemo(
     () => incidents.find((i) => i.id === selectedId) ?? incidents[0]!,
@@ -151,6 +168,10 @@ export function SocWarRoom() {
         window.clearTimeout(toastTimerRef.current)
         toastTimerRef.current = null
       }
+      if (blockAfterOtpFailRef.current != null) {
+        window.clearTimeout(blockAfterOtpFailRef.current)
+        blockAfterOtpFailRef.current = null
+      }
     }
   }, [])
 
@@ -197,6 +218,20 @@ export function SocWarRoom() {
     return () => window.clearTimeout(t)
   }, [visibleLines.length, selected.requiresSelfieReview, selected.reasoning.length, isBlocked])
 
+  useEffect(() => {
+    if (!showSelfie || !selected.requiresSelfieReview) return
+    setOtpDigits([...EMPTY_OTP])
+    setOtpPhase("entry")
+    if (blockAfterOtpFailRef.current != null) {
+      window.clearTimeout(blockAfterOtpFailRef.current)
+      blockAfterOtpFailRef.current = null
+    }
+    const id = window.requestAnimationFrame(() => {
+      otpInputRefs.current[0]?.focus()
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [showSelfie, selected.requiresSelfieReview, selectedId])
+
   function onSelectRow(id: string) {
     setSelectedId(id)
     setShowSelfie(false)
@@ -232,6 +267,78 @@ export function SocWarRoom() {
       setActiveThreatCount((c) => Math.max(0, c - 1))
     }
     showToast("Session verified. Marked as safe.")
+  }
+
+  function setOtpDigitAt(index: number, digit: string) {
+    setOtpDigits((prev) => {
+      const next = [...prev]
+      next[index] = digit
+      return next
+    })
+  }
+
+  function onOtpChange(index: number, raw: string) {
+    const d = raw.replace(/\D/g, "").slice(-1)
+    setOtpDigitAt(index, d)
+    if (d && index < 5) {
+      window.requestAnimationFrame(() => {
+        otpInputRefs.current[index + 1]?.focus()
+      })
+    }
+  }
+
+  function onOtpKeyDown(index: number, e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Backspace") return
+    if (e.currentTarget.value) return
+    e.preventDefault()
+    if (index <= 0) return
+    setOtpDigitAt(index - 1, "")
+    window.requestAnimationFrame(() => {
+      otpInputRefs.current[index - 1]?.focus()
+    })
+  }
+
+  async function onVerifyOtp() {
+    const otp = otpDigits.join("")
+    if (otp.length !== 6 || otpPhase === "loading") return
+    setOtpPhase("loading")
+    try {
+      const res = await fetch(VERIFY_OTP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: selected.emailRedacted,
+          otp,
+        }),
+      })
+      const data = (await res.json()) as { verified?: boolean }
+      if (data.verified === true) {
+        if (blockAfterOtpFailRef.current != null) {
+          window.clearTimeout(blockAfterOtpFailRef.current)
+          blockAfterOtpFailRef.current = null
+        }
+        setOtpPhase("success")
+        onMarkSafe()
+        return
+      }
+      setOtpPhase("failure")
+      if (blockAfterOtpFailRef.current != null) {
+        window.clearTimeout(blockAfterOtpFailRef.current)
+      }
+      blockAfterOtpFailRef.current = window.setTimeout(() => {
+        onBlockSession()
+        blockAfterOtpFailRef.current = null
+      }, 3000)
+    } catch {
+      setOtpPhase("failure")
+      if (blockAfterOtpFailRef.current != null) {
+        window.clearTimeout(blockAfterOtpFailRef.current)
+      }
+      blockAfterOtpFailRef.current = window.setTimeout(() => {
+        onBlockSession()
+        blockAfterOtpFailRef.current = null
+      }, 3000)
+    }
   }
 
   return (
@@ -409,7 +516,7 @@ export function SocWarRoom() {
         </aside>
 
         {/* Center */}
-        <main className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-y-contain bg-[#000000] px-3 py-4 lg:col-span-6 lg:px-4">
+        <main className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-y-contain bg-[#000000] px-3 py-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:col-span-6 lg:px-4">
           <div className="group relative mx-auto w-full max-w-md shrink-0">
             <Globe
               markers={globeMarkers}
@@ -491,7 +598,7 @@ export function SocWarRoom() {
           </div>
 
           <div
-            className="min-h-[140px] flex-1 rounded-lg border border-[#2a0a0a] bg-[#0a0000] p-4 font-mono text-xs leading-relaxed text-[#ef4444]"
+            className="min-h-[140px] shrink-0 rounded-lg border border-[#2a0a0a] bg-[#0a0000] p-4 font-mono text-xs leading-relaxed text-[#ef4444]"
             style={{ borderWidth: "0.5px" }}
           >
             {visibleLines.map((line) => (
@@ -506,32 +613,80 @@ export function SocWarRoom() {
 
           {showSelfie && selected.requiresSelfieReview && (
             <Card
-              className="border border-[#2a0a0a] bg-[#0a0000] shadow-none"
+              className="shrink-0 border border-[#2a0a0a] bg-[#0a0000] shadow-none"
               style={{ borderWidth: "0.5px" }}
             >
               <CardContent className="space-y-3 pt-4">
-                <p className="font-mono text-xs text-[#ffffff]">Selfie verification requested</p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    type="button"
-                    className="flex-1 border-0 bg-[#22c55e] text-white hover:bg-[#22c55e]/90"
-                    onClick={() => setShowSelfie(false)}
-                  >
-                    Confirmed — Real User
-                  </Button>
-                  <Button
-                    type="button"
-                    className="flex-1 border-0 bg-[#ef4444] text-white hover:bg-[#ef4444]/90"
-                    onClick={onBlockSession}
-                  >
-                    Stranger Detected — Block
-                  </Button>
-                </div>
+                {otpPhase === "success" ? (
+                  <div className="flex items-center gap-2 font-mono text-sm text-[#22c55e]">
+                    <Check className="size-5 shrink-0" aria-hidden />
+                    <span>Identity confirmed. Marking safe.</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="font-mono text-[12px] text-[#ef4444]">IDENTITY VERIFICATION REQUIRED</p>
+                    <p className="text-[11px] text-[#9ca3af]">
+                      A 6-digit code has been sent to the account owner&apos;s email.
+                    </p>
+                    <div className="flex justify-center gap-2">
+                      {otpDigits.map((digit, i) => (
+                        <input
+                          key={i}
+                          ref={(el) => {
+                            otpInputRefs.current[i] = el
+                          }}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          disabled={otpPhase === "loading" || otpPhase === "failure"}
+                          onChange={(e) => onOtpChange(i, e.target.value)}
+                          onKeyDown={(e) => onOtpKeyDown(i, e)}
+                          className="text-center font-mono text-[18px] text-[#ffffff] outline-none focus-visible:ring-1 focus-visible:ring-[#ef4444]"
+                          style={{
+                            width: "36px",
+                            height: "44px",
+                            background: "#0a0000",
+                            border: "0.5px solid #ef4444",
+                            borderRadius: "4px",
+                          }}
+                          aria-label={`Digit ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                    {otpPhase === "failure" ? (
+                      <p className="font-mono text-sm text-[#ef4444]">
+                        Invalid or expired code. Session will be blocked.
+                      </p>
+                    ) : null}
+                    <Button
+                      type="button"
+                      disabled={otpPhase === "loading" || otpPhase === "failure" || otpDigits.join("").length !== 6}
+                      className="w-full border-0 bg-[#ef4444] font-mono text-sm text-[#ffffff] hover:bg-[#dc2626] disabled:opacity-60"
+                      onClick={() => void onVerifyOtp()}
+                    >
+                      {otpPhase === "loading" ? "Verifying..." : "Verify Identity"}
+                    </Button>
+                    <button
+                      type="button"
+                      disabled={otpPhase === "loading" || otpPhase === "failure"}
+                      className="w-full border-0 bg-transparent p-0 text-center font-mono text-[11px] text-[#9ca3af] underline-offset-2 hover:underline disabled:opacity-50"
+                      onClick={() => {
+                        setOtpDigits([...EMPTY_OTP])
+                        window.requestAnimationFrame(() => {
+                          otpInputRefs.current[0]?.focus()
+                        })
+                      }}
+                    >
+                      Send new code
+                    </button>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
 
-          <div className="mt-auto flex flex-col gap-2 pb-2 sm:flex-row">
+          <div className="flex shrink-0 flex-col gap-2 pb-2 sm:flex-row">
             <SocTooltip
               text="Terminate session and notify user via email."
               wrapperClassName="flex min-w-0 flex-1 flex-col sm:flex-1"

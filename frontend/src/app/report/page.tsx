@@ -16,7 +16,7 @@ export default function ReportPage() {
           className="font-mono text-[#ef4444]"
           style={{ fontSize: "20px", fontWeight: 800, letterSpacing: "-0.05em" }}
         >
-          VAULT
+          Vault
         </span>
         <h1 className="min-w-0 flex-1 text-center font-mono text-sm font-medium text-[#9ca3af] md:text-base">
           Incident Report #INC-2047

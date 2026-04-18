@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation"
 import { FormEvent, useState } from "react"
 
-import { GlobePulse } from "@/components/ui/cobe-globe-pulse"
-import { TextMarque } from "@/components/ui/text-marque"
+import { LampContainer } from "@/components/ui/lamp"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -19,38 +18,26 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#000000] text-[#ffffff] lg:h-[100dvh] lg:min-h-0 lg:flex-row lg:overflow-hidden">
-      <div className="relative flex h-[50dvh] min-h-0 w-full flex-col bg-[#000000] lg:h-full lg:w-1/2">
-        <div className="relative flex h-full min-h-0 w-full flex-col">
-          <GlobePulse
-            className="h-full w-full min-h-0 !aspect-auto"
-            speed={0.002}
-          />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 w-full space-y-1">
-            <TextMarque
-              baseVelocity={-0.8}
-              text="AUTONOMOUS THREAT DETECTION"
-              className="font-bold tracking-[-0.07em] text-[#7f1d1d] text-sm"
-            />
-            <TextMarque
-              baseVelocity={0.8}
-              text="ACCOUNT SECURITY IN 4 SECONDS"
-              className="font-bold tracking-[-0.07em] text-[#ef4444] text-sm"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-1 items-center justify-center px-6 py-12 lg:w-1/2 lg:py-0">
+    <div className="min-h-screen bg-[#000000] pb-0 text-[#ffffff]">
+      <LampContainer className="rounded-none justify-center gap-0 [&>div:first-child]:!h-[min(48dvh,32rem)] [&>div:first-child]:!min-h-0 [&>div:first-child]:!flex-none [&>div:first-child]:!shrink-0 [&>div:last-child]:pb-0">
         <form
           onSubmit={onSubmit}
-          className="w-full max-w-md rounded-lg border border-[#7f1d1d] bg-[#0a0000] p-8 shadow-none"
-          style={{ borderWidth: "1px" }}
+          className="w-full max-w-md rounded-[12px] border border-[#7f1d1d] p-10 shadow-none backdrop-blur-sm"
+          style={{
+            background: "rgba(0, 0, 0, 0.8)",
+            borderWidth: "1px",
+          }}
         >
           <h1
-            className="text-center font-mono leading-none text-[#ef4444]"
-            style={{ fontSize: "40px", fontWeight: 900, letterSpacing: "-0.06em" }}
+            className="text-center leading-none text-[#ef4444]"
+            style={{
+              fontFamily: "var(--font-inter), Inter, sans-serif",
+              fontSize: "56px",
+              fontWeight: 900,
+              letterSpacing: "-0.04em",
+            }}
           >
-            VAULT
+            Vault
           </h1>
           <p className="mt-2 text-center text-[13px] text-[#9ca3af]">
             Security Operations Platform
@@ -94,7 +81,7 @@ export function LoginScreen() {
             <p>Authorized personnel only</p>
           </div>
         </form>
-      </div>
+      </LampContainer>
     </div>
   )
 }

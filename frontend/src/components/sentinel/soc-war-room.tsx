@@ -48,10 +48,17 @@ export function SocWarRoom() {
   const [visibleLines, setVisibleLines] = useState<string[]>([])
   const [showSelfie, setShowSelfie] = useState(false)
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set())
+  const [safeIds, setSafeIds] = useState<Set<string>>(new Set())
+  /** Incident already counted toward Active Threats reduction (block or safe, once). */
+  const [mitigatedIds, setMitigatedIds] = useState<Set<string>>(new Set())
+  const [activeThreatCount, setActiveThreatCount] = useState(4)
+  const [blockedTodayCount, setBlockedTodayCount] = useState(12)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const isBlocked = blockedIds.has(selectedId)
 
   const pipelineTimers = useRef<number[]>([])
   const typewriterTimers = useRef<number[]>([])
+  const toastTimerRef = useRef<number | null>(null)
 
   const selected = useMemo(
     () => incidents.find((i) => i.id === selectedId) ?? incidents[0]!,
@@ -113,6 +120,26 @@ export function SocWarRoom() {
   }, [])
 
   useEffect(() => {
+    return () => {
+      if (toastTimerRef.current != null) {
+        window.clearTimeout(toastTimerRef.current)
+        toastTimerRef.current = null
+      }
+    }
+  }, [])
+
+  const showToast = useCallback((message: string) => {
+    if (toastTimerRef.current != null) {
+      window.clearTimeout(toastTimerRef.current)
+    }
+    setToastMessage(message)
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage(null)
+      toastTimerRef.current = null
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
     const frozen = blockedIds.has(selectedId)
     const kick = window.setTimeout(() => {
       setShowSelfie(false)
@@ -150,7 +177,21 @@ export function SocWarRoom() {
   }
 
   function onBlockSession() {
+    const wasAlreadyBlocked = blockedIds.has(selectedId)
     setBlockedIds((prev) => new Set(prev).add(selectedId))
+    setSafeIds((prev) => {
+      const n = new Set(prev)
+      n.delete(selectedId)
+      return n
+    })
+    if (!wasAlreadyBlocked) {
+      setBlockedTodayCount((c) => c + 1)
+    }
+    if (!mitigatedIds.has(selectedId)) {
+      setMitigatedIds((prev) => new Set(prev).add(selectedId))
+      setActiveThreatCount((c) => Math.max(0, c - 1))
+    }
+    showToast("Session terminated. User notified.")
   }
 
   function onMarkSafe() {
@@ -159,10 +200,25 @@ export function SocWarRoom() {
       n.delete(selectedId)
       return n
     })
+    setSafeIds((prev) => new Set(prev).add(selectedId))
+    if (!mitigatedIds.has(selectedId)) {
+      setMitigatedIds((prev) => new Set(prev).add(selectedId))
+      setActiveThreatCount((c) => Math.max(0, c - 1))
+    }
+    showToast("Session verified. Marked as safe.")
   }
 
   return (
-    <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#000000] text-[#ffffff]">
+    <div className="relative flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#000000] text-[#ffffff]">
+      {toastMessage != null && (
+        <div
+          className="pointer-events-none fixed right-4 top-20 z-[60] max-w-sm rounded-md border border-[#7f1d1d] bg-[#0a0000]/95 px-4 py-3 font-mono text-xs text-[#ffffff] shadow-lg backdrop-blur-sm"
+          style={{ borderWidth: "1px" }}
+          role="status"
+        >
+          {toastMessage}
+        </div>
+      )}
       <header
         className="flex shrink-0 flex-wrap items-center justify-between gap-4 px-4 py-3 md:px-6"
         style={{
@@ -175,10 +231,15 @@ export function SocWarRoom() {
         }}
       >
         <span
-          className="font-mono text-[#ef4444]"
-          style={{ fontSize: "20px", fontWeight: 800, letterSpacing: "-0.05em" }}
+          className="text-[#ef4444]"
+          style={{
+          fontFamily: "var(--font-inter), Inter, sans-serif",
+          fontSize: "20px",
+          fontWeight: 800,
+          letterSpacing: "-0.04em",
+        }}
         >
-          VAULT
+          Vault
         </span>
         <span className="min-w-0 flex-1 truncate px-2 text-center text-xs text-[#9ca3af] sm:text-sm">
           Acme Corp — Security Operations.
@@ -214,7 +275,18 @@ export function SocWarRoom() {
                 const isSel = inc.id === selectedId
                 const isWs = inc.id.startsWith("ws-")
                 const blocked = blockedIds.has(inc.id)
-                const pulseBucharest = inc.id === "bucharest" && isSel && !blocked
+                const safe = safeIds.has(inc.id) && !blocked
+                const pulseBucharest = inc.id === "bucharest" && isSel && !blocked && !safe
+                const leftBorder =
+                  isSel
+                    ? "#ef4444"
+                    : safe
+                      ? "#6b7280"
+                      : inc.severity === "CRITICAL"
+                        ? "#7f1d1d"
+                        : inc.severity === "WARN"
+                          ? "#92400e"
+                          : "#6b7280"
                 return (
                   <li key={inc.id}>
                     <button
@@ -233,13 +305,7 @@ export function SocWarRoom() {
                       style={{
                         borderLeftWidth: isSel ? "2px" : "3px",
                         borderLeftStyle: "solid",
-                        borderLeftColor: isSel
-                          ? "#ef4444"
-                          : inc.severity === "CRITICAL"
-                            ? "#7f1d1d"
-                            : inc.severity === "WARN"
-                              ? "#92400e"
-                              : "#6b7280",
+                        borderLeftColor: leftBorder,
                       }}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -250,6 +316,13 @@ export function SocWarRoom() {
                             className="border-[#2a0a0a] bg-[#0a0000] font-mono text-[10px] uppercase tracking-wide text-[#9ca3af]"
                           >
                             BLOCKED
+                          </Badge>
+                        ) : safe ? (
+                          <Badge
+                            variant="secondary"
+                            className="border-[#2a0a0a] bg-[#0a0000] font-mono text-[10px] uppercase tracking-wide text-[#22c55e]"
+                          >
+                            VERIFIED
                           </Badge>
                         ) : (
                           <Badge
@@ -488,8 +561,8 @@ export function SocWarRoom() {
           <div className="mt-auto flex flex-wrap gap-2 pb-2">
             {[
               ["847", "Accounts Monitored"],
-              ["4", "Active Threats"],
-              ["12", "Blocked Today"],
+              [String(activeThreatCount), "Active Threats"],
+              [String(blockedTodayCount), "Blocked Today"],
               ["3.2s", "Avg Response Time"],
             ].map(([k, label]) => (
               <div

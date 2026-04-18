@@ -2,7 +2,7 @@ import requests
 import json
 import time
 
-LAMBDA_URL = "https://4y8tbuqggh.execute-api.us-west-2.amazonaws.com/production"
+LAMBDA_URL = "https://tza8pyb17g.execute-api.us-west-2.amazonaws.com/default/vault-receive-event"
 
 events = [
     {

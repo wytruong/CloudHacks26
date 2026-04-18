@@ -164,10 +164,20 @@ export function SocWarRoom() {
   return (
     <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#000000] text-[#ffffff]">
       <header
-        className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-[#1a0000] bg-[#000000] px-4 py-3 md:px-6"
-        style={{ borderBottomWidth: "0.5px" }}
+        className="flex shrink-0 flex-wrap items-center justify-between gap-4 px-4 py-3 md:px-6"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          background: "rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "0.5px solid rgba(239, 68, 68, 0.3)",
+        }}
       >
-        <span className="font-mono text-sm font-semibold tracking-wide text-[#ef4444]">
+        <span
+          className="font-mono text-[#ef4444]"
+          style={{ fontSize: "20px", fontWeight: 800, letterSpacing: "-0.05em" }}
+        >
           VAULT
         </span>
         <span className="min-w-0 flex-1 truncate px-2 text-center text-xs text-[#9ca3af] sm:text-sm">

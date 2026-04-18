@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { FormEvent, useState } from "react"
 
 import { GlobePulse } from "@/components/ui/cobe-globe-pulse"
+import { TextMarque } from "@/components/ui/text-marque"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -18,10 +19,25 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#000000] text-[#ffffff] lg:flex-row">
-      <div className="relative flex min-h-[42vh] flex-1 items-stretch justify-center bg-[#000000] lg:min-h-screen lg:w-1/2">
-        <div className="relative h-full min-h-[320px] w-full max-w-[min(100vw,720px)] p-4 lg:max-w-none lg:p-8">
-          <GlobePulse className="h-full w-full max-h-[min(85vh,720px)]" speed={0.002} />
+    <div className="flex min-h-screen flex-col bg-[#000000] text-[#ffffff] lg:h-[100dvh] lg:min-h-0 lg:flex-row lg:overflow-hidden">
+      <div className="relative flex h-[50dvh] min-h-0 w-full flex-col bg-[#000000] lg:h-full lg:w-1/2">
+        <div className="relative flex h-full min-h-0 w-full flex-col">
+          <GlobePulse
+            className="h-full w-full min-h-0 !aspect-auto"
+            speed={0.002}
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 w-full space-y-1">
+            <TextMarque
+              baseVelocity={-0.8}
+              text="AUTONOMOUS THREAT DETECTION"
+              className="font-bold tracking-[-0.07em] text-[#7f1d1d] text-sm"
+            />
+            <TextMarque
+              baseVelocity={0.8}
+              text="ACCOUNT SECURITY IN 4 SECONDS"
+              className="font-bold tracking-[-0.07em] text-[#ef4444] text-sm"
+            />
+          </div>
         </div>
       </div>
       <div className="flex flex-1 items-center justify-center px-6 py-12 lg:w-1/2 lg:py-0">
@@ -31,8 +47,8 @@ export function LoginScreen() {
           style={{ borderWidth: "1px" }}
         >
           <h1
-            className="text-center font-mono font-bold text-[#ef4444]"
-            style={{ fontSize: "32px", letterSpacing: "3px" }}
+            className="text-center font-mono leading-none text-[#ef4444]"
+            style={{ fontSize: "40px", fontWeight: 900, letterSpacing: "-0.06em" }}
           >
             VAULT
           </h1>

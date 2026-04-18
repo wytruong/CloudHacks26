@@ -12,7 +12,10 @@ export default function ReportPage() {
         className="flex flex-wrap items-center justify-between gap-4 border-b border-[#2a0a0a] bg-[#000000] px-4 py-4 md:px-8"
         style={{ borderBottomWidth: "0.5px" }}
       >
-        <span className="font-mono text-sm font-semibold tracking-wide text-[#ef4444]">
+        <span
+          className="font-mono text-[#ef4444]"
+          style={{ fontSize: "20px", fontWeight: 800, letterSpacing: "-0.05em" }}
+        >
           VAULT
         </span>
         <h1 className="min-w-0 flex-1 text-center font-mono text-sm font-medium text-[#9ca3af] md:text-base">

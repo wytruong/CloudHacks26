@@ -83,8 +83,9 @@ Lambda: vault-verify-otp — OTP / verification step
 
 | Name | Role | Owns |
 |---|---|---|
-| My Truong | Frontend + Full Stack | Next.js app (3 screens), WebSocket client, simulation → HTTP API wiring, end-to-end demo |
-| Jenny | AWS / ML integration | Amazon Rekognition flow for 60–89% confidence verification |
+| My Truong | Frontend + Full Stack Lead | Next.js app (3 screens), AWS Lambda, Bedrock AI integration, DynamoDB, API Gateway WebSocket + HTTP, SNS email alerts, OTP verification, Rekognition face verification, Bedrock Guardrails, simulation script, end-to-end demo |
+| Jenny | AWS / ML Support | Rekognition reference photo setup, S3 bucket configuration |
+
 
 ---
 

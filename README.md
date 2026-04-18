@@ -1,11 +1,11 @@
-# 🛡️ SentinelIQ
+## SentinelIQ
 ### Autonomous Account Takeover Detection & Response — UCI CloudHacks 2026
 
 > "SentinelIQ doesn't just detect one attack. It recognizes when your entire platform is under coordinated attack — and shuts it down autonomously."
 
 ---
 
-## 🚨 The Problem
+## The Problem
 
 By the time an end user finds out their account was compromised, the damage is done. Existing tools detect threats but still require a human to investigate and respond manually. That takes hours. Attackers need seconds.
 
@@ -15,7 +15,7 @@ SentinelIQ closes that gap to 4 seconds.
 
 ---
 
-## 💡 What SentinelIQ Does
+## What SentinelIQ Does
 
 SentinelIQ is an **autonomous multi-agent security system** powered by Amazon Bedrock AgentCore that detects suspicious login attempts, investigates them across your entire user base, and responds — all without human intervention for high-confidence threats.
 
@@ -30,7 +30,7 @@ It doesn't just flag threats. It thinks, coordinates, decides, and acts.
 
 ---
 
-## 🎯 Demo Scenarios
+## Demo Scenarios
 
 **Single account attack (97% confidence — fully autonomous):**
 2AM login from Bucharest, Romania. Last login Irvine CA 6 hours ago. 5,700 miles apart. Device unknown. MFA failed. Blocked in 4 seconds.
@@ -43,7 +43,7 @@ Login from Singapore, known device but unusual hour. Rekognition requests a self
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 End User Login Event
@@ -69,7 +69,7 @@ API Gateway WebSocket → React SOC Dashboard
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -88,7 +88,7 @@ API Gateway WebSocket → React SOC Dashboard
 
 ---
 
-## 👥 Team
+## Team
 
 | Name | Role | Owns |
 |---|---|---|
@@ -98,7 +98,7 @@ API Gateway WebSocket → React SOC Dashboard
 
 ---
 
-## 🔌 API Contract
+## API Contract
 
 ```json
 POST /api/login-event
@@ -140,7 +140,7 @@ WebSocket Response:
 
 ---
 
-## 📁 Repo Structure
+## Repo Structure
 
 ```
 CloudHacks26/
@@ -170,34 +170,7 @@ CloudHacks26/
 └── README.md
 ```
 
----
-
-## ⏱️ 72-Hour Build Plan
-
-**Tonight (Hours 1-4):**
-- My Truong: scaffold frontend, 3 screens with dummy data, WebSocket hook
-- Jenny: Kinesis stream up, Lambda consumer, Bedrock returning hardcoded response
-- Person 3: write all 6 demo events covering 3 confidence tiers
-
-**Tomorrow Morning (Hours 5-12):**
-- My Truong: COBE globe, typewriter animation, agent step visualizer
-- Jenny: AgentCore multi-agent pipeline, Neptune graph, DynamoDB schema
-- Person 3: simulation script firing events to Kinesis on timer
-
-**Tomorrow Afternoon (Hours 13-24):**
-- Integration: connect frontend WebSocket to API Gateway
-- Full end-to-end test
-- Rekognition selfie flow for 60-89% events
-
-**Sunday (Hours 25-60):**
-- Polish, bug fixes, stress test demo
-- Person 3: Devpost writeup + architecture diagram
-- Record demo video
-- Submit by 5:50PM
-
----
-
-## 🏆 Track Targets
+## Track Targets
 
 - **AWS Track** — Primary (Kinesis + AgentCore + Neptune + Rekognition + Step Functions)
 - **Best AI Safety Track** — Secondary (explainable AI, human-in-loop, Rekognition safety net, coordinated attack protection)

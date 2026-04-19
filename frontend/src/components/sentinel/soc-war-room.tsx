@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation"
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent,
   type ReactNode,
 } from "react"
+import { createPortal } from "react-dom"
 import { Check, LogOut } from "lucide-react"
 
 import { Globe } from "@/components/ui/cobe-globe"
@@ -70,11 +72,92 @@ const STAT_PILL_TOOLTIPS: Partial<Record<string, string>> = {
 const TOOLTIP_PANEL_CLASS =
   "pointer-events-none absolute bottom-full left-1/2 z-[100] mb-1.5 w-max max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal border border-[#ef4444] bg-[#0a0000] px-2 py-1 text-center font-mono text-[11px] leading-snug text-[#9ca3af] opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
 
-function SocTooltip({ children, text, wrapperClassName }: { children: ReactNode; text: string; wrapperClassName?: string }) {
+const FIXED_TOOLTIP_CLASS =
+  "pointer-events-none w-max max-w-[min(280px,calc(100vw-2rem))] whitespace-normal border border-[#ef4444] bg-[#0a0000] px-2 py-1 text-center font-mono text-[11px] leading-snug text-[#9ca3af] shadow-lg"
+
+function SocTooltip({
+  children,
+  text,
+  wrapperClassName,
+  panelClassName,
+  fixedViewport,
+}: {
+  children: ReactNode
+  text: string
+  wrapperClassName?: string
+  panelClassName?: string
+  fixedViewport?: boolean
+}) {
+  const wrapperRef = useRef<HTMLSpanElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  const [fixedVisible, setFixedVisible] = useState(false)
+  const [fixedTop, setFixedTop] = useState(0)
+  const [fixedLeft, setFixedLeft] = useState(0)
+
+  useLayoutEffect(() => {
+    if (!fixedViewport || !fixedVisible) return
+    const wrap = wrapperRef.current
+    const tip = tooltipRef.current
+    if (!wrap || !tip) return
+    const r = wrap.getBoundingClientRect()
+    const h = tip.offsetHeight
+    setFixedLeft(r.left + r.width / 2)
+    setFixedTop(r.top - h - 8)
+  }, [fixedViewport, fixedVisible, text])
+
+  if (fixedViewport) {
+    const portal =
+      typeof document !== "undefined" &&
+      fixedVisible &&
+      createPortal(
+        <div
+          ref={tooltipRef}
+          className={FIXED_TOOLTIP_CLASS}
+          role="tooltip"
+          style={{
+            position: "fixed",
+            zIndex: 9999,
+            top: fixedTop,
+            left: fixedLeft,
+            transform: "translateX(-50%)",
+            borderWidth: "0.5px",
+            borderRadius: "4px",
+          }}
+        >
+          {text}
+        </div>,
+        document.body
+      )
+
+    return (
+      <>
+        <span
+          ref={wrapperRef}
+          className={wrapperClassName ?? "inline-flex max-w-full"}
+          onMouseEnter={() => {
+            const el = wrapperRef.current
+            if (!el) return
+            const r = el.getBoundingClientRect()
+            setFixedLeft(r.left + r.width / 2)
+            setFixedVisible(true)
+          }}
+          onMouseLeave={() => setFixedVisible(false)}
+        >
+          {children}
+        </span>
+        {portal}
+      </>
+    )
+  }
+
   return (
     <span className={wrapperClassName ? `group relative ${wrapperClassName}` : "group relative inline-flex max-w-full"}>
       {children}
-      <span className={TOOLTIP_PANEL_CLASS} style={{ borderWidth: "0.5px", borderRadius: "4px" }} role="tooltip">
+      <span
+        className={panelClassName ?? TOOLTIP_PANEL_CLASS}
+        style={{ borderWidth: "0.5px", borderRadius: "4px" }}
+        role="tooltip"
+      >
         {text}
       </span>
     </span>
@@ -729,7 +812,7 @@ export function SocWarRoom() {
                 const st = pipeline[idx]!
                 return (
                   <div key={label} className="flex flex-1 items-center gap-2">
-                    <SocTooltip text={PIPELINE_TOOLTIPS[label]!} wrapperClassName="flex min-w-0 flex-1">
+                    <SocTooltip text={PIPELINE_TOOLTIPS[label]!} wrapperClassName="flex min-w-0 flex-1" fixedViewport>
                       <div
                         className={[
                           "flex min-h-[52px] w-full flex-1 flex-col justify-center rounded-md border px-2 py-2 text-center font-mono text-[11px] leading-tight",

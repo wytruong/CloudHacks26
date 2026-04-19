@@ -22,9 +22,9 @@ Vault is an **autonomous login-risk pipeline** that ingests login events (via an
 ### Confidence Threshold System
 | Confidence | Action | Human Needed? |
 |---|---|---|
-| 90%+ | Auto-block, notify user, generate report | ❌ None |
-| 60–89% | Rekognition selfie check → analyst confirms | ✅ One click |
-| Below 60% | Silent flag, low priority queue | 🔍 Review later |
+| 90%+ | Auto-block, notify user, generate report | None |
+| 60–89% | Rekognition selfie check → analyst confirms | One click |
+| Below 60% | Silent flag, low priority queue | Review later |
 
 ---
 

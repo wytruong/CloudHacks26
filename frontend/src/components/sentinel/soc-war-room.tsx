@@ -27,8 +27,11 @@ const TYPEWRITER_MS = 800
 const VERIFY_OTP_URL =
   "https://pou67ig3wd.execute-api.us-west-2.amazonaws.com/default/vault-verify-otp"
 
+//const REKOGNITION_URL =
+//  "https://tza8pyb17g.execute-api.us-west-2.amazonaws.com/default/vault-receive-event"
 const REKOGNITION_URL =
-  "https://tza8pyb17g.execute-api.us-west-2.amazonaws.com/default/vault-receive-event"
+  "https://nf2dlrr62i.execute-api.us-west-2.amazonaws.com/cloudhacks/verify"
+
 
 const EMPTY_OTP = ["", "", "", "", "", ""] as const
 

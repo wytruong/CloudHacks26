@@ -38,8 +38,10 @@ def lambda_handler(event, context):
             response = rekognition.compare_faces(
                 SourceImage={
                     'S3Object': {
-                        'Bucket': 'vault-reference-photos',
-                        'Name': '20260418_142404.JPG'
+                        #'Bucket': 'vault-reference-photos',
+                        #'Name': '20260418_142404.JPG'
+                        'Bucket': 'faceid-enrollment-images',
+                        'Name': '20260418_142404.jpg'
                     }
                 },
                 TargetImage={

@@ -68,7 +68,7 @@ const STAT_PILL_TOOLTIPS: Partial<Record<string, string>> = {
 }
 
 const TOOLTIP_PANEL_CLASS =
-  "pointer-events-none absolute bottom-full left-1/2 z-[80] mb-1.5 w-max max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal border border-[#ef4444] bg-[#0a0000] px-2 py-1 text-center font-mono text-[11px] leading-snug text-[#9ca3af] opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
+  "pointer-events-none absolute bottom-full left-1/2 z-[100] mb-1.5 w-max max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal border border-[#ef4444] bg-[#0a0000] px-2 py-1 text-center font-mono text-[11px] leading-snug text-[#9ca3af] opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
 
 function SocTooltip({ children, text, wrapperClassName }: { children: ReactNode; text: string; wrapperClassName?: string }) {
   return (
@@ -119,6 +119,19 @@ export function SocWarRoom() {
     () => incidents.find((i) => i.id === selectedId) ?? incidents[0]!,
     [incidents, selectedId]
   )
+
+  const accountId = selected.emailRedacted
+
+  const outcomeVerdict = useMemo((): "BLOCK" | "CONFIRM" | "FLAG" => {
+    if (blockedIds.has(selectedId)) return "BLOCK"
+    if (safeIds.has(selectedId)) return "CONFIRM"
+    return "FLAG"
+  }, [blockedIds, safeIds, selectedId])
+
+  const outcomeRecordsProtected =
+    outcomeVerdict === "BLOCK" ? "3000" : outcomeVerdict === "CONFIRM" ? "500" : "0"
+  const outcomeDamageAvoided =
+    outcomeVerdict === "BLOCK" ? "$47,000" : outcomeVerdict === "CONFIRM" ? "$8,000" : "$0"
 
   const globeMarkers = useMemo(() => selected.markers, [selected.markers])
   const globeArcs = useMemo(() => selected.arcs, [selected.arcs])
@@ -961,8 +974,8 @@ export function SocWarRoom() {
               </div>
               <p className="text-[10px] uppercase tracking-wide text-[#ef4444]">#security-alerts</p>
               <p className="text-[#ffffff]">
-                Unusual velocity login for {selected.emailRedacted} from {selected.city}. Automated triage
-                engaged — review in Vault.
+                Unusual velocity login for {accountId} from {selected.city}. Automated triage engaged — review in
+                Vault.
               </p>
             </CardContent>
           </Card>
@@ -975,10 +988,10 @@ export function SocWarRoom() {
               <p className="font-mono text-[10px] uppercase tracking-wide text-[#9ca3af]">Email preview</p>
               <p className="text-sm font-medium text-[#ffffff]">Unusual login detected on your account</p>
               <p className="text-xs text-[#9ca3af]">
-                We blocked a suspicious session from {selected.city}, {selected.countryCode}. If this was not you,
-                no action is required.
+                We blocked a suspicious session from {selected.city}, {selected.countryCode}. If this was not you, no
+                action is required.
               </p>
-              <p className="font-mono text-[11px] text-[#9ca3af]">To: {selected.emailRedacted}</p>
+              <p className="font-mono text-[11px] text-[#9ca3af]">To: {accountId}</p>
             </CardContent>
           </Card>
 
@@ -988,8 +1001,20 @@ export function SocWarRoom() {
               style={{ borderWidth: "0.5px" }}
             >
               <CardContent className="space-y-3 pt-4">
-                <Badge className="border-0 bg-[#2a0a0a] font-mono text-[10px] uppercase tracking-wide text-[#ef4444] hover:bg-[#2a0a0a]">
-                  Incident Resolved
+                <Badge
+                  className={
+                    outcomeVerdict === "BLOCK"
+                      ? "border-0 bg-[#2a0a0a] font-mono text-[10px] uppercase tracking-wide text-[#ef4444] hover:bg-[#2a0a0a]"
+                      : outcomeVerdict === "CONFIRM"
+                        ? "border-0 bg-[#2a0a0a] font-mono text-[10px] uppercase tracking-wide text-amber-400 hover:bg-[#2a0a0a]"
+                        : "border-0 bg-[#2a0a0a] font-mono text-[10px] uppercase tracking-wide text-gray-400 hover:bg-[#2a0a0a]"
+                  }
+                >
+                  {outcomeVerdict === "BLOCK"
+                    ? "THREAT BLOCKED"
+                    : outcomeVerdict === "CONFIRM"
+                      ? "SESSION VERIFIED"
+                      : "FLAGGED FOR REVIEW"}
                 </Badge>
                 <dl className="grid grid-cols-1 gap-2 font-mono text-[11px] text-[#9ca3af]">
                   <div className="flex justify-between gap-2">
@@ -998,11 +1023,11 @@ export function SocWarRoom() {
                   </div>
                   <div className="flex justify-between gap-2">
                     <dt>Records Protected</dt>
-                    <dd className="text-[#ffffff]">3000</dd>
+                    <dd className="text-[#ffffff]">{outcomeRecordsProtected}</dd>
                   </div>
                   <div className="flex justify-between gap-2">
                     <dt>Damage Avoided</dt>
-                    <dd className="text-[#ffffff]">$47000</dd>
+                    <dd className="text-[#ffffff]">{outcomeDamageAvoided}</dd>
                   </div>
                   <div className="flex justify-between gap-2">
                     <dt>Logged</dt>
@@ -1012,7 +1037,32 @@ export function SocWarRoom() {
                 <Button
                   type="button"
                   className="w-full border-0 bg-[#ef4444] font-mono text-xs text-[#ffffff] hover:bg-[#dc2626]"
-                  onClick={() => router.push("/report")}
+                  onClick={() => {
+                    const confidence =
+                      selected.confidence ??
+                      (selected.severity === "CRITICAL" ? 97 : selected.severity === "WARN" ? 71 : 50)
+                    let verdict: string
+                    if (blockedIds.has(selectedId)) verdict = "BLOCK"
+                    else if (safeIds.has(selectedId)) verdict = "SAFE"
+                    else if (confidence >= 90) verdict = "BLOCK"
+                    else if (confidence >= 60) verdict = "WARN"
+                    else verdict = "FLAG"
+                    const payload = {
+                      accountId: selected.emailRedacted,
+                      city: selected.city,
+                      country: selected.countryCode,
+                      confidence,
+                      verdict,
+                      reasoning: selected.reasoning,
+                      timestamp: new Date().toISOString(),
+                    }
+                    try {
+                      localStorage.setItem("vault-selected-incident", JSON.stringify(payload))
+                    } catch {
+                      /* ignore quota / private mode */
+                    }
+                    router.push("/report")
+                  }}
                 >
                   View Full Report
                 </Button>
@@ -1025,7 +1075,7 @@ export function SocWarRoom() {
 
           <div className="mt-auto flex flex-wrap gap-2 pb-2">
             {[
-              ["847", "Accounts Monitored"],
+              [String(incidents.length), "Accounts Monitored"],
               [String(activeThreatCount), "Active Threats"],
               [String(blockedTodayCount), "Blocked Today"],
               ["3.2s", "Avg Response Time"],
